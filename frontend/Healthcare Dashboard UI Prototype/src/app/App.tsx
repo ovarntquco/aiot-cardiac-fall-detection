@@ -3,7 +3,6 @@ import {
   Activity,
   AlertTriangle,
   Bell,
-  CheckCircle,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -14,9 +13,7 @@ import {
   Lock,
   LogOut,
   MapPin,
-  Navigation,
   RefreshCw,
-  Save,
   Settings,
   Shield,
   TrendingUp,
@@ -35,13 +32,14 @@ import {
 } from "recharts";
 import { fetchAlertDetail, fetchAlerts, fetchOverview, type AlertDetail, type AlertSummary, type OverviewResponse } from "./api";
 
-type Screen = "login" | "home" | "alerts" | "settings" | "gps";
+type Screen = "login" | "home" | "alerts" | "sos" | "settings" | "gps";
 type MetricStatus = "normal" | "warning" | "critical";
 
 function Sidebar({ current, onNav }: { current: Screen; onNav: (s: Screen) => void }) {
   const items: { id: Screen; label: string; icon: ReactNode }[] = [
     { id: "home", label: "Tong quan", icon: <Home size={18} /> },
     { id: "alerts", label: "Lich su canh bao", icon: <Bell size={18} /> },
+    { id: "sos", label: "SOS", icon: <AlertTriangle size={18} /> },
     { id: "gps", label: "Vi tri GPS", icon: <MapPin size={18} /> },
     { id: "settings", label: "Cai dat", icon: <Settings size={18} /> },
   ];
@@ -584,117 +582,45 @@ function AlertHistoryScreen({ onNav }: { onNav: (s: Screen) => void }) {
   );
 }
 
-function SettingsScreen({ onNav }: { onNav: (s: Screen) => void }) {
-  const [hrMin, setHrMin] = useState(60);
-  const [hrMax, setHrMax] = useState(100);
-  const [spo2Min, setSpo2Min] = useState(95);
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2500);
-  };
-
+function SosScreen({ onNav }: { onNav: (s: Screen) => void }) {
   return (
-    <DashboardLayout screen="settings" onNav={onNav} title="Cai dat" subtitle="Cau hinh nguong canh bao va thong bao">
-      <div className="max-w-2xl space-y-6">
-        <div className="bg-card rounded-lg border border-border p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
-              <Heart size={17} className="text-red-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Nguong nhip tim</h3>
-              <p className="text-xs text-muted-foreground">Canh bao khi nhip tim nam ngoai khoang nay</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-5">
-            <NumberSetting label="Toi thieu (bpm)" value={hrMin} min={30} max={80} onChange={setHrMin} />
-            <NumberSetting label="Toi da (bpm)" value={hrMax} min={80} max={150} onChange={setHrMax} />
-          </div>
-        </div>
+    <PlaceholderScreen
+      screen="sos"
+      onNav={onNav}
+      title="SOS"
+      useCase="UC5"
+      requirements={["FR6", "FR7"]}
+      modulePath="backend/src/modules/sos"
+      todo="Nhan tin hieu nhan giu nut SOS tu thiet bi, ghi su kien va kich hoat luong canh bao."
+    />
+  );
+}
 
-        <div className="bg-card rounded-lg border border-border p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Activity size={17} className="text-primary" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Nguong SpO2</h3>
-              <p className="text-xs text-muted-foreground">Canh bao khi do bao hoa oxy giam duoi muc nay</p>
-            </div>
-          </div>
-          <NumberSetting label="SpO2 toi thieu (%)" value={spo2Min} min={85} max={98} onChange={setSpo2Min} />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <p className={`text-sm transition-opacity duration-300 ${saved ? "opacity-100 text-emerald-600" : "opacity-0"}`}>
-            <CheckCircle size={14} className="inline mr-1.5" />
-            Da luu cai dat thanh cong
-          </p>
-          <button onClick={handleSave} className="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors">
-            <Save size={15} />
-            Luu thay doi
-          </button>
-        </div>
-      </div>
-    </DashboardLayout>
+function SettingsScreen({ onNav }: { onNav: (s: Screen) => void }) {
+  return (
+    <PlaceholderScreen
+      screen="settings"
+      onNav={onNav}
+      title="Cai dat nguong ca nhan"
+      useCase="UC7"
+      requirements={["FR9", "FR10", "FR11"]}
+      modulePath="backend/src/modules/personal-thresholds"
+      todo="Them form cap nhat nguong, validation va API luu/restore nguong ca nhan."
+    />
   );
 }
 
 function GpsScreen({ onNav }: { onNav: (s: Screen) => void }) {
   return (
-    <DashboardLayout screen="gps" onNav={onNav} title="Vi tri GPS" subtitle="Vi tri moi nhat cua benh nhan">
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 bg-card rounded-lg border border-border overflow-hidden" style={{ height: 480 }}>
-          <div className="relative w-full h-full bg-slate-100 overflow-hidden">
-            <svg width="100%" height="100%" viewBox="0 0 640 480" preserveAspectRatio="xMidYMid slice">
-              <rect width="640" height="480" fill="#E8EEF4" />
-              <rect x="20" y="20" width="180" height="120" rx="4" fill="#D4DCE8" />
-              <rect x="220" y="20" width="140" height="80" rx="4" fill="#D4DCE8" />
-              <rect x="380" y="20" width="240" height="120" rx="4" fill="#D4DCE8" />
-              <rect x="20" y="180" width="120" height="100" rx="4" fill="#D4DCE8" />
-              <rect x="160" y="160" width="200" height="140" rx="4" fill="#D4DCE8" />
-              <rect x="380" y="160" width="120" height="80" rx="4" fill="#D4DCE8" />
-              <rect x="520" y="160" width="100" height="120" rx="4" fill="#D4DCE8" />
-              <rect x="0" y="150" width="640" height="18" fill="#F4F6FA" />
-              <rect x="0" y="300" width="640" height="18" fill="#F4F6FA" />
-              <rect x="200" y="0" width="18" height="480" fill="#F4F6FA" />
-              <rect x="360" y="0" width="18" height="480" fill="#F4F6FA" />
-              <rect x="222" y="162" width="136" height="136" rx="4" fill="#C8DCC0" />
-              <text x="290" y="290" fontSize="10" fill="#7A9E72" textAnchor="middle" fontFamily="sans-serif">Cong vien Ho Sen</text>
-              <circle cx="300" cy="159" r="18" fill="#2563EB" fillOpacity="0.15" />
-              <circle cx="300" cy="159" r="10" fill="#2563EB" />
-              <circle cx="300" cy="159" r="5" fill="white" />
-              <circle cx="300" cy="159" r="22" fill="none" stroke="#2563EB" strokeWidth="2" strokeOpacity="0.4" />
-              <rect x="312" y="144" width="120" height="28" rx="6" fill="white" />
-              <text x="372" y="162" fontSize="11" fill="#111827" textAnchor="middle" fontWeight="600" fontFamily="sans-serif">Nguyen Thi Hoa</text>
-            </svg>
-            <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-md border border-border px-3 py-2 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-medium text-foreground">Dang theo doi truc tiep</span>
-            </div>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <InfoPanel title="Vi tri hien tai" icon={<Navigation size={15} className="text-primary" />}>
-            <p className="text-sm font-semibold text-foreground">14 Ngo Hoa Cuc</p>
-            <p className="text-xs text-muted-foreground">Tay Ho, Ha Noi</p>
-            <p className="mt-3 text-sm text-foreground" style={{ fontFamily: "'DM Mono', monospace" }}>21.0627 N</p>
-            <p className="text-sm text-foreground" style={{ fontFamily: "'DM Mono', monospace" }}>105.8399 E</p>
-          </InfoPanel>
-          <div className="bg-emerald-50 rounded-lg border border-emerald-100 p-5">
-            <div className="flex items-start gap-3">
-              <CheckCircle size={16} className="text-emerald-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-emerald-700">Trong vung an toan</p>
-                <p className="text-xs text-emerald-600 mt-0.5">Khong co canh bao ra khoi vung an toan.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </DashboardLayout>
+    <PlaceholderScreen
+      screen="gps"
+      onNav={onNav}
+      title="Vi tri benh nhan"
+      useCase="UC6"
+      requirements={["FR8"]}
+      modulePath="backend/src/modules/patient-location"
+      todo="Tich hop du lieu GPS that, kiem tra quyen xem va hien thi ban do/vi tri moi nhat."
+    />
   );
 }
 
@@ -754,37 +680,48 @@ function StateMessage({ title, message, tone = "info", compact = false }: { titl
   );
 }
 
-function NumberSetting({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (value: number) => void }) {
+function PlaceholderScreen({
+  screen,
+  onNav,
+  title,
+  useCase,
+  requirements,
+  modulePath,
+  todo,
+}: {
+  screen: Screen;
+  onNav: (s: Screen) => void;
+  title: string;
+  useCase: string;
+  requirements: string[];
+  modulePath: string;
+  todo: string;
+}) {
   return (
-    <div>
-      <label className="block text-xs font-medium text-muted-foreground mb-2">{label}</label>
-      <input
-        type="number"
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        min={min}
-        max={max}
-        className="w-full px-3 py-2.5 rounded-lg border border-border bg-background text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-        style={{ fontFamily: "'DM Mono', monospace" }}
-      />
-      <input type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} className="w-full mt-2 accent-blue-600" />
-      <div className="flex justify-between text-[10px] text-muted-foreground">
-        <span>{min}</span>
-        <span>{max}</span>
+    <DashboardLayout screen={screen} onNav={onNav} title={title} subtitle={`${useCase} - ${requirements.join(", ")}`}>
+      <div className="max-w-2xl bg-card rounded-lg border border-border p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle size={18} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Dang phat trien</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Module nay da duoc scaffold de tiep tuc phat trien, nhung chua co business logic hay du lieu that.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3 mt-6">
+          <DetailCell label="Use case" value={useCase} />
+          <DetailCell label="FR" value={requirements.join(", ")} />
+          <DetailCell label="Module" value={modulePath} />
+        </div>
+        <div className="bg-background rounded-lg border border-border p-3.5 mt-4">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">TODO tiep theo</p>
+          <p className="text-sm text-foreground">{todo}</p>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function InfoPanel({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
-  return (
-    <div className="bg-card rounded-lg border border-border p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">{icon}</div>
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      </div>
-      {children}
-    </div>
+    </DashboardLayout>
   );
 }
 
@@ -845,6 +782,7 @@ export default function App() {
       {screen === "login" && <LoginScreen onLogin={() => setScreen("home")} />}
       {screen === "home" && <HomeScreen onNav={setScreen} />}
       {screen === "alerts" && <AlertHistoryScreen onNav={setScreen} />}
+      {screen === "sos" && <SosScreen onNav={setScreen} />}
       {screen === "settings" && <SettingsScreen onNav={setScreen} />}
       {screen === "gps" && <GpsScreen onNav={setScreen} />}
     </div>

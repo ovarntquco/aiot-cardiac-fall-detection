@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { before, after, describe, it } from "node:test";
+import { describe, it } from "node:test";
 import { createServer } from "../src/server.js";
 
 const TOKEN = "dev-caregiver-token";
@@ -265,6 +265,38 @@ describe("alerts API", () => {
 
       assert.equal(response.status, 403);
       assert.equal(json.error.code, "FORBIDDEN");
+    });
+  });
+
+  it("returns a structured error when alert list repository access fails", async () => {
+    const repository = {
+      async findUserByToken() {
+        return { id: "USER_1", primaryPatientId: "PATIENT_1", accessiblePatientIds: ["PATIENT_1"] };
+      },
+      async getAlerts() {
+        throw new Error("database unavailable");
+      },
+    };
+
+    await withApi(repository, async (baseUrl) => {
+      const { response, json } = await getJson(baseUrl, "/api/alerts");
+
+      assert.equal(response.status, 500);
+      assert.equal(json.error.code, "DATABASE_ERROR");
+    });
+  });
+});
+
+describe("placeholder API modules", () => {
+  it("returns 501 for scaffolded routes", async () => {
+    await withApi(makeRepository(), async (baseUrl) => {
+      const { response, json } = await getJson(baseUrl, "/api/patient-location");
+
+      assert.equal(response.status, 501);
+      assert.equal(json.success, false);
+      assert.equal(json.error.code, "FEATURE_NOT_IMPLEMENTED");
+      assert.equal(json.error.useCase, "UC6");
+      assert.deepEqual(json.error.requirements, ["FR8"]);
     });
   });
 });
