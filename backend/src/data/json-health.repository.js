@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const defaultDbPath = path.resolve(__dirname, "../../database/seed-data.json");
+const defaultDbPath = path.resolve(__dirname, "../../../database/seed-data.json");
 
 export class JsonHealthRepository {
   constructor(dbPath = process.env.CAREWATCH_DB_PATH || defaultDbPath) {

@@ -1,3 +1,7 @@
+import { sendJson } from "../../http/response.js";
+
+// Supporting infrastructure for UC3/FR4 and UC4/FR5 only.
+// TODO(UC1/FR1): replace this dev adapter with production authentication.
 export function createAuthMiddleware(repository) {
   return async function authenticate(req, res) {
     const header = req.headers.authorization || "";
@@ -46,9 +50,4 @@ export function ensurePatientAccess(req, res, user) {
   }
 
   return patientId;
-}
-
-function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(payload));
 }
