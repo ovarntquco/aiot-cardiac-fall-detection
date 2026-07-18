@@ -1,0 +1,119 @@
+{
+  "users": [
+    {
+      "id": "USER_CAREGIVER_001",
+      "name": "Tran Thi Lan",
+      "role": "caregiver",
+      "token": "dev-caregiver-token",
+      "primaryPatientId": "PATIENT_DEMO_001",
+      "accessiblePatientIds": ["PATIENT_DEMO_001"]
+    }
+  ],
+  "patients": [
+    {
+      "id": "PATIENT_DEMO_001",
+      "name": "Nguyen Thi Hoa",
+      "age": 78,
+      "deviceStatus": "CONNECTED"
+    },
+    {
+      "id": "PATIENT_OTHER_001",
+      "name": "Le Van Minh",
+      "age": 82,
+      "deviceStatus": "CONNECTED"
+    }
+  ],
+  "healthMeasurements": [
+    { "id": "MEAS_001", "patientId": "PATIENT_DEMO_001", "heartRate": 72, "spo2": 98, "measuredAt": "2026-07-18T01:00:00.000Z" },
+    { "id": "MEAS_002", "patientId": "PATIENT_DEMO_001", "heartRate": 75, "spo2": 97, "measuredAt": "2026-07-18T01:30:00.000Z" },
+    { "id": "MEAS_003", "patientId": "PATIENT_DEMO_001", "heartRate": 78, "spo2": 98, "measuredAt": "2026-07-18T02:00:00.000Z" },
+    { "id": "MEAS_004", "patientId": "PATIENT_DEMO_001", "heartRate": 74, "spo2": 96, "measuredAt": "2026-07-18T02:30:00.000Z" },
+    { "id": "MEAS_005", "patientId": "PATIENT_DEMO_001", "heartRate": 80, "spo2": 97, "measuredAt": "2026-07-18T03:00:00.000Z" },
+    { "id": "MEAS_006", "patientId": "PATIENT_DEMO_001", "heartRate": 77, "spo2": 98, "measuredAt": "2026-07-18T03:30:00.000Z" },
+    { "id": "MEAS_007", "patientId": "PATIENT_DEMO_001", "heartRate": 76, "spo2": 99, "measuredAt": "2026-07-18T04:00:00.000Z" },
+    { "id": "MEAS_008", "patientId": "PATIENT_DEMO_001", "heartRate": 82, "spo2": 97, "measuredAt": "2026-07-18T04:30:00.000Z" },
+    { "id": "MEAS_009", "patientId": "PATIENT_DEMO_001", "heartRate": 79, "spo2": 98, "measuredAt": "2026-07-18T05:00:00.000Z" },
+    { "id": "MEAS_010", "patientId": "PATIENT_DEMO_001", "heartRate": 85, "spo2": 96, "measuredAt": "2026-07-18T05:30:00.000Z" },
+    { "id": "MEAS_011", "patientId": "PATIENT_DEMO_001", "heartRate": 81, "spo2": 97, "measuredAt": "2026-07-18T06:00:00.000Z" },
+    { "id": "MEAS_012", "patientId": "PATIENT_DEMO_001", "heartRate": 78, "spo2": 97, "measuredAt": "2026-07-18T08:30:00.000Z" },
+    { "id": "MEAS_013", "patientId": "PATIENT_OTHER_001", "heartRate": 69, "spo2": 98, "measuredAt": "2026-07-18T08:10:00.000Z" }
+  ],
+  "personalThresholds": [
+    {
+      "patientId": "PATIENT_DEMO_001",
+      "heartRateMin": 60,
+      "heartRateMax": 100,
+      "spo2Min": 95,
+      "spo2Max": 100
+    },
+    {
+      "patientId": "PATIENT_OTHER_001",
+      "heartRateMin": 55,
+      "heartRateMax": 105,
+      "spo2Min": 94,
+      "spo2Max": 100
+    }
+  ],
+  "alerts": [
+    {
+      "id": "ALERT_20260718_082000",
+      "patientId": "PATIENT_DEMO_001",
+      "type": "FALL_DETECTED",
+      "severity": "HIGH",
+      "status": "CONFIRMED",
+      "message": "Phat hien nguy co te nga",
+      "heartRate": 105,
+      "spo2": 93,
+      "fallProbability": 0.91,
+      "occurredAt": "2026-07-18T08:20:00.000Z"
+    },
+    {
+      "id": "ALERT_20260717_154700",
+      "patientId": "PATIENT_DEMO_001",
+      "type": "CARDIAC_ABNORMAL",
+      "severity": "MEDIUM",
+      "status": "RESOLVED",
+      "message": "Nhip tim cao bat thuong",
+      "heartRate": 112,
+      "spo2": 97,
+      "fallProbability": null,
+      "occurredAt": "2026-07-17T15:47:00.000Z"
+    },
+    {
+      "id": "ALERT_20260716_112200",
+      "patientId": "PATIENT_DEMO_001",
+      "type": "LOW_SPO2",
+      "severity": "MEDIUM",
+      "status": "RESOLVED",
+      "message": "SpO2 thap hon nguong ca nhan",
+      "heartRate": 84,
+      "spo2": 91,
+      "fallProbability": null,
+      "occurredAt": "2026-07-16T11:22:00.000Z"
+    },
+    {
+      "id": "ALERT_20260715_070500",
+      "patientId": "PATIENT_DEMO_001",
+      "type": "SOS",
+      "severity": "HIGH",
+      "status": "ACKNOWLEDGED",
+      "message": "Nut SOS duoc kich hoat",
+      "heartRate": 98,
+      "spo2": 96,
+      "fallProbability": 0.31,
+      "occurredAt": "2026-07-15T07:05:00.000Z"
+    },
+    {
+      "id": "ALERT_OTHER_PATIENT",
+      "patientId": "PATIENT_OTHER_001",
+      "type": "FALL_DETECTED",
+      "severity": "HIGH",
+      "status": "CONFIRMED",
+      "message": "Canh bao thuoc benh nhan khac",
+      "heartRate": 101,
+      "spo2": 94,
+      "fallProbability": 0.87,
+      "occurredAt": "2026-07-18T07:00:00.000Z"
+    }
+  ]
+}
