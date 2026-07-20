@@ -4,6 +4,17 @@
 
 The frontend is a Vite React application under `frontend/Healthcare Dashboard UI Prototype`. It keeps the existing dashboard layout and calls the backend through the Vite `/api` proxy.
 
+Frontend module layout:
+
+- `src/app/App.tsx`: screen selection only.
+- `src/app/types.ts`: shared screen and UI types.
+- `src/app/api.ts`: backend API client and API response types.
+- `src/app/lib`: formatting and status helper functions.
+- `src/app/components/layout`: shell layout, sidebar, and header.
+- `src/app/components/common`: reusable state/detail/placeholder UI.
+- `src/app/components/metrics`: overview metric widgets.
+- `src/app/screens`: feature screens and placeholder routes.
+
 Implemented screens:
 
 - UC3 / FR4: overview dashboard.
