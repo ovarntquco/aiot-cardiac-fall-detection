@@ -10,9 +10,25 @@ const navItems: { id: Screen; label: string; icon: ReactNode }[] = [
   { id: "settings", label: "Cai dat", icon: <Settings size={18} /> },
 ];
 
-export function Sidebar({ current, onNav }: { current: Screen; onNav: (screen: Screen) => void }) {
+export function Sidebar({
+  current,
+  onNav,
+  patient,
+}: {
+  current: Screen;
+  onNav: (screen: Screen) => void;
+  patient?: {
+    name?: string;
+    age?: number;
+    deviceStatus?: string;
+  } | null;
+}) {
+  const patientName = patient?.name || "Benh nhan dang theo doi";
+  const patientMeta = patient?.age ? `Benh nhan - ${patient.age} tuoi` : "Chua co thong tin chi tiet";
+  const isConnected = patient?.deviceStatus === "CONNECTED";
+
   return (
-    <aside className="w-60 flex-shrink-0 bg-card border-r border-border flex flex-col h-full">
+    <aside className="hidden h-full w-60 flex-shrink-0 flex-col border-r border-border bg-card lg:flex">
       <div className="h-16 flex items-center gap-3 px-6 border-b border-border">
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
           <Shield size={16} className="text-white" />
@@ -28,22 +44,24 @@ export function Sidebar({ current, onNav }: { current: Screen; onNav: (screen: S
           <User size={16} className="text-primary" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-foreground truncate">Nguyen Thi Hoa</p>
-          <p className="text-[10px] text-muted-foreground">Benh nhan - 78 tuoi</p>
+          <p className="truncate text-xs font-semibold text-foreground">{patientName}</p>
+          <p className="truncate text-[10px] text-muted-foreground">{patientMeta}</p>
         </div>
-        <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 ml-auto" />
+        <div className={`ml-auto h-2 w-2 flex-shrink-0 rounded-full ${isConnected ? "bg-emerald-500" : "bg-slate-300"}`} />
       </div>
 
       <nav className="flex-1 px-3 py-2 space-y-0.5">
         {navItems.map((item) => (
           <button
             key={item.id}
+            type="button"
             onClick={() => onNav(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
               current === item.id
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
+            aria-current={current === item.id ? "page" : undefined}
           >
             {item.icon}
             {item.label}
@@ -53,12 +71,13 @@ export function Sidebar({ current, onNav }: { current: Screen; onNav: (screen: S
 
       <div className="px-3 pb-4">
         <div className="px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <Wifi size={13} className="text-emerald-500" />
-          Thiet bi da ket noi
+          <Wifi size={13} className={isConnected ? "text-emerald-500" : "text-slate-400"} />
+          {isConnected ? "Thiet bi da ket noi" : "Chua co trang thai thiet bi"}
         </div>
         <button
+          type="button"
           onClick={() => onNav("login")}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
+          className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
         >
           <LogOut size={18} />
           Dang xuat

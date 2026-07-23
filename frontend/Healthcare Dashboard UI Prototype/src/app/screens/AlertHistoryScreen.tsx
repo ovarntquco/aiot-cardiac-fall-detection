@@ -15,12 +15,13 @@ export function AlertHistoryScreen({ onNav }: { onNav: (screen: Screen) => void 
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<{ id: string; message: string } | null>(null);
 
   const loadAlerts = async () => {
     setLoading(true);
     setError(null);
     setExpanded(null);
+    setDetailError(null);
     try {
       setAlerts(await fetchAlerts());
     } catch (loadError) {
@@ -31,22 +32,25 @@ export function AlertHistoryScreen({ onNav }: { onNav: (screen: Screen) => void 
     }
   };
 
-  const toggleAlert = async (id: string) => {
-    if (expanded === id) {
+  const toggleAlert = async (id: string, forceReload = false) => {
+    if (expanded === id && !forceReload) {
       setExpanded(null);
       return;
     }
 
     setExpanded(id);
     setDetailError(null);
-    if (details[id]) return;
+    if (details[id] && !forceReload) return;
 
     setDetailLoading(id);
     try {
       const detail = await fetchAlertDetail(id);
       setDetails((current) => ({ ...current, [id]: detail }));
     } catch (loadError) {
-      setDetailError(loadError instanceof Error ? loadError.message : "Khong the tai chi tiet canh bao.");
+      setDetailError({
+        id,
+        message: loadError instanceof Error ? loadError.message : "Khong the tai chi tiet canh bao.",
+      });
     } finally {
       setDetailLoading(null);
     }
@@ -58,19 +62,26 @@ export function AlertHistoryScreen({ onNav }: { onNav: (screen: Screen) => void 
 
   return (
     <DashboardLayout screen="alerts" onNav={onNav} title="Lich su canh bao" subtitle="Tat ca canh bao cua benh nhan duoc lay tu database">
-      <div className="max-w-3xl">
-        <div className="flex items-center justify-between mb-5">
+      <div className="max-w-4xl">
+        <div className="mb-5 flex items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
             {loading ? "Dang tai danh sach canh bao" : `${alerts.length} canh bao`}
           </p>
-          <button onClick={loadAlerts} className="flex items-center gap-2 text-sm text-primary hover:underline">
-            <RefreshCw size={13} />
-            Lam moi
+          <button
+            type="button"
+            onClick={loadAlerts}
+            disabled={loading}
+            className="flex min-h-12 flex-shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            {loading ? "Dang tai" : "Lam moi"}
           </button>
         </div>
 
         {loading && <StateMessage title="Dang tai lich su" message="Dang truy van canh bao moi nhat truoc." />}
-        {error && !loading && <StateMessage title="Khong the tai canh bao" message={error} tone="error" />}
+        {error && !loading && (
+          <StateMessage title="Khong the tai canh bao" message={error} tone="error" actionLabel="Thu lai" onAction={() => void loadAlerts()} />
+        )}
         {!loading && !error && alerts.length === 0 && (
           <StateMessage title="Chua co canh bao" message="Database chua co canh bao nao cho benh nhan nay." tone="empty" />
         )}
@@ -84,10 +95,15 @@ export function AlertHistoryScreen({ onNav }: { onNav: (screen: Screen) => void 
 
               return (
                 <div key={alert.id} className="bg-card rounded-lg border border-border overflow-hidden transition-shadow hover:shadow-sm">
-                  <button className="w-full flex items-center gap-4 px-6 py-4 text-left" onClick={() => void toggleAlert(alert.id)}>
+                  <button
+                    type="button"
+                    className="flex min-h-16 w-full items-start gap-3 px-4 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 sm:items-center sm:gap-4 sm:px-6"
+                    onClick={() => void toggleAlert(alert.id)}
+                    aria-expanded={isOpen}
+                  >
                     <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${sty.dot}`} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-foreground">{alert.message}</span>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${sty.badge}`}>
                           {alert.severity}
@@ -101,18 +117,27 @@ export function AlertHistoryScreen({ onNav }: { onNav: (screen: Screen) => void 
                   </button>
 
                   {isOpen && (
-                    <div className="border-t border-border px-6 py-5 bg-background">
+                    <div className="border-t border-border bg-background px-4 py-5 sm:px-6">
                       {detailLoading === alert.id && <StateMessage title="Dang tai chi tiet" message="Dang lay thong tin canh bao theo ID." compact />}
-                      {detailError && !detailLoading && <StateMessage title="Khong the tai chi tiet" message={detailError} tone="error" compact />}
+                      {detailError?.id === alert.id && !detailLoading && (
+                        <StateMessage
+                          title="Khong the tai chi tiet"
+                          message={detailError.message}
+                          tone="error"
+                          compact
+                          actionLabel="Thu lai"
+                          onAction={() => void toggleAlert(alert.id, true)}
+                        />
+                      )}
                       {detail && !detailLoading && (
                         <>
-                          <div className="grid grid-cols-4 gap-4 mb-4">
+                          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             <DetailCell label="ID" value={detail.id} />
                             <DetailCell label="Thoi gian" value={formatDateTime(detail.occurredAt)} />
                             <DetailCell label="Nhip tim" value={detail.heartRate === null ? "Khong co" : `${detail.heartRate} bpm`} />
                             <DetailCell label="SpO2" value={detail.spo2 === null ? "Khong co" : `${detail.spo2}%`} />
                           </div>
-                          <div className="grid grid-cols-3 gap-4 mb-4">
+                          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                             <DetailCell label="Loai" value={detail.type} />
                             <DetailCell label="Muc do" value={detail.severity} />
                             <DetailCell label="Xac suat te nga" value={detail.fallProbability === null ? "Khong co" : `${Math.round(detail.fallProbability * 100)}%`} />

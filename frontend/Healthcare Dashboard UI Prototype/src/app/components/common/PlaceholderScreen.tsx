@@ -22,7 +22,7 @@ export function PlaceholderScreen({
 }) {
   return (
     <DashboardLayout screen={screen} onNav={onNav} title={title} subtitle={`${useCase} - ${requirements.join(", ")}`}>
-      <div className="max-w-2xl bg-card rounded-lg border border-border p-6">
+      <div className="max-w-2xl rounded-lg border border-border bg-card p-5 sm:p-6">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
             <AlertTriangle size={18} />
@@ -34,7 +34,7 @@ export function PlaceholderScreen({
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3 mt-6">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <DetailCell label="Use case" value={useCase} />
           <DetailCell label="FR" value={requirements.join(", ")} />
           <DetailCell label="Module" value={modulePath} />

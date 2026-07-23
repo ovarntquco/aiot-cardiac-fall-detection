@@ -15,20 +15,6 @@ export function SosScreen({ onNav }: { onNav: (screen: Screen) => void }) {
   );
 }
 
-export function SettingsScreen({ onNav }: { onNav: (screen: Screen) => void }) {
-  return (
-    <PlaceholderScreen
-      screen="settings"
-      onNav={onNav}
-      title="Cai dat nguong ca nhan"
-      useCase="UC7"
-      requirements={["FR9", "FR10", "FR11"]}
-      modulePath="backend/src/modules/personal-thresholds"
-      todo="Them form cap nhat nguong, validation va API luu/restore nguong ca nhan."
-    />
-  );
-}
-
 export function GpsScreen({ onNav }: { onNav: (screen: Screen) => void }) {
   return (
     <PlaceholderScreen

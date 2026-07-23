@@ -15,7 +15,7 @@ export function ThresholdCard({
         <div className="w-7 h-7 rounded-lg bg-background flex items-center justify-center">{icon}</div>
         <span className="text-sm font-semibold text-foreground">{title}</span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
         {values.map((item) => (
           <div key={item.label} className="bg-background rounded-lg border border-border p-3">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">{item.label}</p>
