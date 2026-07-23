@@ -23,7 +23,9 @@ export function AlertHistoryScreen({ onNav }: { onNav: (screen: Screen) => void 
     setExpanded(null);
     setDetailError(null);
     try {
-      setAlerts(await fetchAlerts());
+      const loadedAlerts = await fetchAlerts();
+      setAlerts(loadedAlerts);
+      setDetails({});
     } catch (loadError) {
       setAlerts([]);
       setError(loadError instanceof Error ? loadError.message : "Khong the tai lich su canh bao.");
@@ -110,7 +112,7 @@ export function AlertHistoryScreen({ onNav }: { onNav: (screen: Screen) => void 
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {alert.type} - {alert.status || "NEW"} - {formatDateTime(alert.occurredAt)}
+                        {alert.type} - {alert.status || "NEW"} - {formatAlertDateTime(alert.occurredAt)}
                       </p>
                     </div>
                     {isOpen ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
@@ -133,13 +135,14 @@ export function AlertHistoryScreen({ onNav }: { onNav: (screen: Screen) => void 
                         <>
                           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             <DetailCell label="ID" value={detail.id} />
-                            <DetailCell label="Thoi gian" value={formatDateTime(detail.occurredAt)} />
-                            <DetailCell label="Nhip tim" value={detail.heartRate === null ? "Khong co" : `${detail.heartRate} bpm`} />
+                            <DetailCell label="Thoi gian" value={formatAlertDateTime(detail.occurredAt)} />
+                            <DetailCell label="Nhip tim" value={detail.heartRate === null ? "Khong co" : `${detail.heartRate} BPM`} />
                             <DetailCell label="SpO2" value={detail.spo2 === null ? "Khong co" : `${detail.spo2}%`} />
                           </div>
-                          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             <DetailCell label="Loai" value={detail.type} />
                             <DetailCell label="Muc do" value={detail.severity} />
+                            <DetailCell label="Trang thai" value={detail.status || "Khong co"} />
                             <DetailCell label="Xac suat te nga" value={detail.fallProbability === null ? "Khong co" : `${Math.round(detail.fallProbability * 100)}%`} />
                           </div>
                           <div className="bg-card rounded-lg border border-border p-3.5">
@@ -158,4 +161,8 @@ export function AlertHistoryScreen({ onNav }: { onNav: (screen: Screen) => void 
       </div>
     </DashboardLayout>
   );
+}
+
+function formatAlertDateTime(value: string | null) {
+  return value ? formatDateTime(value) : "Khong co";
 }
