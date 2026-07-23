@@ -1,12 +1,11 @@
 import { route } from "../../http/router.js";
-import { sendFeatureNotImplemented } from "../shared/not-implemented.js";
+import { createCardiacDetectionController } from "../cardiac-detection/cardiac-detection.controller.js";
 
-// UC2 / FR2-FR3: Sensor data ingestion. Placeholder only.
-export function createSensorDataModule() {
+// Minimal ingestion adapter used by UC8. Device collection details remain UC2 scope.
+export function createSensorDataModule(context) {
+  const cardiacDetection = createCardiacDetectionController(context);
+
   return [
-    route("POST", "/api/sensor-data", ({ res }) => sendFeatureNotImplemented(res, {
-      useCase: "UC2",
-      requirements: ["FR2", "FR3"],
-    })),
+    route("POST", "/api/sensor-data", cardiacDetection.evaluate),
   ];
 }

@@ -47,9 +47,9 @@ export type AlertSummary = {
   id: string;
   type: string;
   severity: string;
-  status?: string;
+  status?: string | null;
   message: string;
-  occurredAt: string;
+  occurredAt: string | null;
 };
 
 export type AlertDetail = AlertSummary & {
