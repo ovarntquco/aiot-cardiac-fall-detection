@@ -8,6 +8,7 @@ const defaultDbPath = path.resolve(__dirname, "../../../database/seed-data.json"
 export class JsonHealthRepository {
   constructor(dbPath = process.env.CAREWATCH_DB_PATH || defaultDbPath) {
     this.dbPath = dbPath;
+    this.writeQueue = Promise.resolve();
   }
 
   async readDatabase() {
@@ -53,18 +54,78 @@ export class JsonHealthRepository {
   }
 
   async updateThresholds(patientId, thresholds) {
-    const db = await this.readDatabase();
-    const record = { patientId, ...thresholds };
-    const index = db.personalThresholds.findIndex((threshold) => threshold.patientId === patientId);
+    return this.mutateDatabase((db) => {
+      const record = { patientId, ...thresholds };
+      const index = db.personalThresholds.findIndex(
+        (threshold) => threshold.patientId === patientId,
+      );
 
-    if (index === -1) {
-      db.personalThresholds.push(record);
-    } else {
-      db.personalThresholds[index] = record;
-    }
+      if (index === -1) {
+        db.personalThresholds.push(record);
+      } else {
+        db.personalThresholds[index] = record;
+      }
 
-    await this.writeDatabase(db);
-    return record;
+      return { changed: true, result: record };
+    });
+  }
+
+  async saveCardiacEvaluation({ reading, alert }) {
+    return this.mutateDatabase((db) => {
+      const existingReading = db.healthMeasurements.find(
+        (measurement) => measurement.id === reading.id,
+      );
+      const existingAlert = db.alerts.find(
+        (candidate) => (
+          candidate.patientId === reading.patientId
+          && candidate.readingId === reading.id
+          && candidate.type === "CARDIAC_ABNORMAL"
+        ),
+      ) || null;
+
+      if (existingReading) {
+        return {
+          changed: false,
+          result: {
+            reading: existingReading,
+            alert: existingAlert,
+            duplicate: true,
+            alertCreated: false,
+          },
+        };
+      }
+
+      db.healthMeasurements.push(reading);
+      if (alert && !existingAlert) {
+        db.alerts.push(alert);
+      }
+
+      return {
+        changed: true,
+        result: {
+          reading,
+          alert: alert || existingAlert,
+          duplicate: false,
+          alertCreated: Boolean(alert && !existingAlert),
+        },
+      };
+    });
+  }
+
+  async mutateDatabase(mutator) {
+    const operation = this.writeQueue.then(async () => {
+      const db = await this.readDatabase();
+      const mutation = await mutator(db);
+      if (mutation.changed) {
+        await this.writeDatabase(db);
+      }
+      return mutation.result;
+    });
+    this.writeQueue = operation.then(
+      () => undefined,
+      () => undefined,
+    );
+    return operation;
   }
 
   async getAlerts(patientId) {

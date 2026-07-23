@@ -104,8 +104,7 @@ function makeRepository(overrides = {}) {
     },
     async getAlerts(patientId) {
       return [...db.alerts]
-        .filter((alert) => alert.patientId === patientId)
-        .sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
+        .filter((alert) => alert.patientId === patientId);
     },
     async getAlertById(id) {
       return db.alerts.find((alert) => alert.id === id) || null;
@@ -303,9 +302,78 @@ describe("alerts API", () => {
 
       assert.equal(response.status, 200);
       assert.equal(json.data.id, "ALERT_NEWER");
+      assert.equal(json.data.type, "FALL_DETECTED");
+      assert.equal(json.data.occurredAt, "2026-07-18T08:20:00.000Z");
+      assert.equal(json.data.status, "CONFIRMED");
+      assert.equal(json.data.message, "Phat hien nguy co te nga");
       assert.equal(json.data.heartRate, 105);
       assert.equal(json.data.spo2, 93);
       assert.equal(json.data.fallProbability, 0.91);
+    });
+  });
+
+  it("returns nullable alert detail fields without dropping them", async () => {
+    const repository = makeRepository({
+      alerts: [
+        {
+          id: "ALERT_NULLABLE",
+          patientId: "PATIENT_1",
+          type: "SOS",
+          severity: "LOW",
+          status: null,
+          message: "Tin hieu khong kem chi so",
+          heartRate: null,
+          spo2: null,
+          fallProbability: null,
+          occurredAt: "2026-07-18T10:00:00.000Z",
+        },
+      ],
+    });
+
+    await withApi(repository, async (baseUrl) => {
+      const { response, json } = await getJson(baseUrl, "/api/alerts/ALERT_NULLABLE");
+
+      assert.equal(response.status, 200);
+      assert.equal(json.data.status, null);
+      assert.equal(json.data.heartRate, null);
+      assert.equal(json.data.spo2, null);
+      assert.equal(json.data.fallProbability, null);
+    });
+  });
+
+  it("uses createdAt as a sorting and response fallback when occurredAt is absent", async () => {
+    const repository = makeRepository({
+      alerts: [
+        {
+          id: "ALERT_CREATED_OLDER",
+          patientId: "PATIENT_1",
+          type: "SYSTEM",
+          severity: "LOW",
+          status: "RESOLVED",
+          message: "Canh bao cu",
+          createdAt: "2026-07-18T07:00:00.000Z",
+        },
+        {
+          id: "ALERT_CREATED_NEWER",
+          patientId: "PATIENT_1",
+          type: "SYSTEM",
+          severity: "LOW",
+          status: "NEW",
+          message: "Canh bao moi",
+          createdAt: "2026-07-18T09:00:00.000Z",
+        },
+      ],
+    });
+
+    await withApi(repository, async (baseUrl) => {
+      const { response, json } = await getJson(baseUrl, "/api/alerts");
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(
+        json.data.map((alert) => alert.id),
+        ["ALERT_CREATED_NEWER", "ALERT_CREATED_OLDER"],
+      );
+      assert.equal(json.data[0].occurredAt, "2026-07-18T09:00:00.000Z");
     });
   });
 

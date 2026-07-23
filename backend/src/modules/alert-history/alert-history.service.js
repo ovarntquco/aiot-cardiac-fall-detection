@@ -1,6 +1,8 @@
 export async function listAlerts({ repository, patientId }) {
   const alerts = await repository.getAlerts(patientId);
-  return alerts.map(toAlertSummary);
+  return [...alerts]
+    .sort((left, right) => alertTimestamp(right) - alertTimestamp(left))
+    .map(toAlertSummary);
 }
 
 export async function getAlertDetail({ repository, alertId, user }) {
@@ -24,9 +26,9 @@ function toAlertSummary(alert) {
     id: alert.id,
     type: alert.type,
     severity: alert.severity,
-    status: alert.status,
+    status: alert.status ?? null,
     message: alert.message,
-    occurredAt: alert.occurredAt,
+    occurredAt: alert.occurredAt ?? alert.createdAt ?? null,
   };
 }
 
@@ -35,11 +37,16 @@ function toAlertDetail(alert) {
     id: alert.id,
     type: alert.type,
     severity: alert.severity,
-    status: alert.status,
+    status: alert.status ?? null,
     message: alert.message,
-    heartRate: alert.heartRate,
-    spo2: alert.spo2,
-    fallProbability: alert.fallProbability,
-    occurredAt: alert.occurredAt,
+    heartRate: alert.heartRate ?? null,
+    spo2: alert.spo2 ?? null,
+    fallProbability: alert.fallProbability ?? null,
+    occurredAt: alert.occurredAt ?? alert.createdAt ?? null,
   };
+}
+
+function alertTimestamp(alert) {
+  const timestamp = Date.parse(alert.occurredAt ?? alert.createdAt ?? "");
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }

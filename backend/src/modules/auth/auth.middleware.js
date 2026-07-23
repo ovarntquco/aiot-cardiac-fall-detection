@@ -38,6 +38,10 @@ export function ensurePatientAccess(req, res, user) {
   const requestedPatientId = new URL(req.url, "http://localhost").searchParams.get("patientId");
   const patientId = requestedPatientId || user.primaryPatientId;
 
+  return ensurePatientIdAccess(res, user, patientId);
+}
+
+export function ensurePatientIdAccess(res, user, patientId) {
   if (!user.accessiblePatientIds.includes(patientId)) {
     sendJson(res, 403, {
       success: false,
