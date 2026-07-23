@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,6 +13,12 @@ export class JsonHealthRepository {
   async readDatabase() {
     const raw = await readFile(this.dbPath, "utf8");
     return JSON.parse(raw);
+  }
+
+  async writeDatabase(database) {
+    const temporaryPath = `${this.dbPath}.${process.pid}.${Date.now()}.tmp`;
+    await writeFile(temporaryPath, `${JSON.stringify(database, null, 2)}\n`, "utf8");
+    await rename(temporaryPath, this.dbPath);
   }
 
   async findUserByToken(token) {
@@ -44,6 +50,21 @@ export class JsonHealthRepository {
   async getThresholds(patientId) {
     const db = await this.readDatabase();
     return db.personalThresholds.find((threshold) => threshold.patientId === patientId) || null;
+  }
+
+  async updateThresholds(patientId, thresholds) {
+    const db = await this.readDatabase();
+    const record = { patientId, ...thresholds };
+    const index = db.personalThresholds.findIndex((threshold) => threshold.patientId === patientId);
+
+    if (index === -1) {
+      db.personalThresholds.push(record);
+    } else {
+      db.personalThresholds[index] = record;
+    }
+
+    await this.writeDatabase(db);
+    return record;
   }
 
   async getAlerts(patientId) {

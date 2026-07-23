@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createServer } from "../src/server.js";
+import { defaultThresholds } from "../src/config/thresholds.js";
 
 const TOKEN = "dev-caregiver-token";
 
@@ -10,6 +11,7 @@ function makeRepository(overrides = {}) {
       {
         id: "USER_1",
         token: TOKEN,
+        role: "caregiver",
         primaryPatientId: "PATIENT_1",
         accessiblePatientIds: ["PATIENT_1"],
       },
@@ -86,6 +88,20 @@ function makeRepository(overrides = {}) {
     async getThresholds(patientId) {
       return db.personalThresholds.find((threshold) => threshold.patientId === patientId) || null;
     },
+    async updateThresholds(patientId, thresholds) {
+      const record = { patientId, ...thresholds };
+      const currentIndex = db.personalThresholds.findIndex(
+        (threshold) => threshold.patientId === patientId,
+      );
+
+      if (currentIndex === -1) {
+        db.personalThresholds.push(record);
+      } else {
+        db.personalThresholds[currentIndex] = record;
+      }
+
+      return record;
+    },
     async getAlerts(patientId) {
       return [...db.alerts]
         .filter((alert) => alert.patientId === patientId)
@@ -102,8 +118,8 @@ function makeRepository(overrides = {}) {
   };
 }
 
-async function withApi(repository, run) {
-  const server = createServer({ repository });
+async function withApi(repository, run, options = {}) {
+  const server = createServer({ repository, ...options });
   await new Promise((resolve) => server.listen(0, resolve));
   const { port } = server.address();
 
@@ -115,15 +131,31 @@ async function withApi(repository, run) {
 }
 
 async function getJson(baseUrl, path, token = TOKEN) {
+  return requestJson(baseUrl, path, { token });
+}
+
+async function requestJson(
+  baseUrl,
+  path,
+  { method = "GET", token = TOKEN, body } = {},
+) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const response = await fetch(`${baseUrl}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   const json = await response.json();
   return { response, json };
 }
 
 describe("overview API", () => {
-  it("returns the latest health indicators and personal thresholds", async () => {
+  it("maps the latest health indicators, timestamp, thresholds, and status", async () => {
     await withApi(makeRepository(), async (baseUrl) => {
       const { response, json } = await getJson(baseUrl, "/api/overview");
 
@@ -133,13 +165,24 @@ describe("overview API", () => {
       assert.equal(json.data.latestMeasurement.heartRate, 78);
       assert.equal(json.data.latestMeasurement.spo2, 97);
       assert.equal(json.data.latestMeasurement.measuredAt, "2026-07-18T08:30:00.000Z");
+      assert.equal(json.data.patient.deviceStatus, "CONNECTED");
       assert.deepEqual(json.data.thresholds, {
         heartRateMin: 60,
         heartRateMax: 100,
         spo2Min: 95,
         spo2Max: 100,
       });
-    });
+      assert.deepEqual(json.data.healthStatus, {
+        overall: "NORMAL",
+        heartRate: "NORMAL",
+        spo2: "NORMAL",
+      });
+      assert.deepEqual(json.data.dataFreshness, {
+        isStale: false,
+        ageSeconds: 600,
+        staleAfterSeconds: 900,
+      });
+    }, { now: () => new Date("2026-07-18T08:40:00.000Z") });
   });
 
   it("does not fail when measurement data is empty", async () => {
@@ -149,7 +192,49 @@ describe("overview API", () => {
       assert.equal(response.status, 200);
       assert.equal(json.data.latestMeasurement, null);
       assert.deepEqual(json.data.recentMeasurements, []);
+      assert.equal(json.data.dataFreshness, null);
+      assert.deepEqual(json.data.healthStatus, {
+        overall: "UNKNOWN",
+        heartRate: "UNKNOWN",
+        spo2: "UNKNOWN",
+      });
     });
+  });
+
+  it("marks old measurements as stale", async () => {
+    await withApi(makeRepository(), async (baseUrl) => {
+      const { response, json } = await getJson(baseUrl, "/api/overview");
+
+      assert.equal(response.status, 200);
+      assert.equal(json.data.dataFreshness.isStale, true);
+      assert.equal(json.data.dataFreshness.ageSeconds, 3600);
+      assert.equal(json.data.dataFreshness.staleAfterSeconds, 900);
+    }, { now: () => new Date("2026-07-18T09:30:00.000Z") });
+  });
+
+  it("maps measurements outside personal thresholds as abnormal", async () => {
+    const repository = makeRepository({
+      healthMeasurements: [
+        {
+          id: "M_ABNORMAL",
+          patientId: "PATIENT_1",
+          heartRate: 112,
+          spo2: 91,
+          measuredAt: "2026-07-18T08:30:00.000Z",
+        },
+      ],
+    });
+
+    await withApi(repository, async (baseUrl) => {
+      const { response, json } = await getJson(baseUrl, "/api/overview");
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(json.data.healthStatus, {
+        overall: "ABNORMAL",
+        heartRate: "ABNORMAL",
+        spo2: "ABNORMAL",
+      });
+    }, { now: () => new Date("2026-07-18T08:35:00.000Z") });
   });
 
   it("returns 401 when the user is not authenticated", async () => {
@@ -283,6 +368,211 @@ describe("alerts API", () => {
 
       assert.equal(response.status, 500);
       assert.equal(json.error.code, "DATABASE_ERROR");
+    });
+  });
+});
+
+describe("personal thresholds API", () => {
+  it("gets the current thresholds and configurable system limits", async () => {
+    await withApi(makeRepository(), async (baseUrl) => {
+      const { response, json } = await getJson(
+        baseUrl,
+        "/api/personal-thresholds?patientId=PATIENT_1",
+      );
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(json.data.thresholds, {
+        patientId: "PATIENT_1",
+        heartRateMin: 60,
+        heartRateMax: 100,
+        spo2Min: 95,
+        spo2Max: 100,
+      });
+      assert.equal(typeof json.data.limits.heartRate.min, "number");
+      assert.equal(typeof json.data.limits.spo2.max, "number");
+    });
+  });
+
+  it("updates valid thresholds and returns the persisted values", async () => {
+    await withApi(makeRepository(), async (baseUrl) => {
+      const update = {
+        heartRateMin: 55,
+        heartRateMax: 110,
+        spo2Min: 92,
+        spo2Max: 99,
+      };
+      const { response, json } = await requestJson(
+        baseUrl,
+        "/api/personal-thresholds?patientId=PATIENT_1",
+        { method: "PUT", body: update },
+      );
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(json.data.thresholds, {
+        patientId: "PATIENT_1",
+        ...update,
+      });
+
+      const current = await getJson(
+        baseUrl,
+        "/api/personal-thresholds?patientId=PATIENT_1",
+      );
+      assert.deepEqual(current.json.data.thresholds, {
+        patientId: "PATIENT_1",
+        ...update,
+      });
+    });
+  });
+
+  it("rejects min values that are not less than max values", async () => {
+    await withApi(makeRepository(), async (baseUrl) => {
+      const { response, json } = await requestJson(
+        baseUrl,
+        "/api/personal-thresholds?patientId=PATIENT_1",
+        {
+          method: "PUT",
+          body: {
+            heartRateMin: 100,
+            heartRateMax: 100,
+            spo2Min: 95,
+            spo2Max: 100,
+          },
+        },
+      );
+
+      assert.equal(response.status, 400);
+      assert.equal(json.error.code, "VALIDATION_ERROR");
+      assert.equal(typeof json.error.fields.heartRateMin, "string");
+      assert.equal(typeof json.error.fields.heartRateMax, "string");
+    });
+  });
+
+  it("rejects non-numeric threshold values", async () => {
+    await withApi(makeRepository(), async (baseUrl) => {
+      const { response, json } = await requestJson(
+        baseUrl,
+        "/api/personal-thresholds?patientId=PATIENT_1",
+        {
+          method: "PUT",
+          body: {
+            heartRateMin: "sixty",
+            heartRateMax: 100,
+            spo2Min: 95,
+            spo2Max: 100,
+          },
+        },
+      );
+
+      assert.equal(response.status, 400);
+      assert.equal(json.error.code, "VALIDATION_ERROR");
+      assert.equal(typeof json.error.fields.heartRateMin, "string");
+    });
+  });
+
+  it("rejects threshold values outside the configured system limits", async () => {
+    await withApi(makeRepository(), async (baseUrl) => {
+      const { response, json } = await requestJson(
+        baseUrl,
+        "/api/personal-thresholds?patientId=PATIENT_1",
+        {
+          method: "PUT",
+          body: {
+            heartRateMin: 0,
+            heartRateMax: 100,
+            spo2Min: 95,
+            spo2Max: 101,
+          },
+        },
+      );
+
+      assert.equal(response.status, 400);
+      assert.equal(json.error.code, "VALIDATION_ERROR");
+      assert.equal(typeof json.error.fields.heartRateMin, "string");
+      assert.equal(typeof json.error.fields.spo2Max, "string");
+    });
+  });
+
+  it("rejects changes outside the caregiver's authorized patients", async () => {
+    await withApi(makeRepository(), async (baseUrl) => {
+      const { response, json } = await requestJson(
+        baseUrl,
+        "/api/personal-thresholds?patientId=PATIENT_2",
+        {
+          method: "PUT",
+          body: {
+            heartRateMin: 55,
+            heartRateMax: 110,
+            spo2Min: 92,
+            spo2Max: 99,
+          },
+        },
+      );
+
+      assert.equal(response.status, 403);
+      assert.equal(json.error.code, "FORBIDDEN");
+    });
+  });
+
+  it("rejects changes from an authenticated non-caregiver", async () => {
+    const repository = makeRepository({
+      users: [
+        {
+          id: "USER_1",
+          token: TOKEN,
+          role: "patient",
+          primaryPatientId: "PATIENT_1",
+          accessiblePatientIds: ["PATIENT_1"],
+        },
+      ],
+    });
+
+    await withApi(repository, async (baseUrl) => {
+      const { response, json } = await requestJson(
+        baseUrl,
+        "/api/personal-thresholds?patientId=PATIENT_1",
+        {
+          method: "PUT",
+          body: {
+            heartRateMin: 55,
+            heartRateMax: 110,
+            spo2Min: 92,
+            spo2Max: 99,
+          },
+        },
+      );
+
+      assert.equal(response.status, 403);
+      assert.equal(json.error.code, "FORBIDDEN");
+    });
+  });
+
+  it("restores configured defaults after confirmation", async () => {
+    await withApi(makeRepository(), async (baseUrl) => {
+      await requestJson(
+        baseUrl,
+        "/api/personal-thresholds?patientId=PATIENT_1",
+        {
+          method: "PUT",
+          body: {
+            heartRateMin: 55,
+            heartRateMax: 110,
+            spo2Min: 92,
+            spo2Max: 99,
+          },
+        },
+      );
+
+      const { response, json } = await requestJson(
+        baseUrl,
+        "/api/personal-thresholds/restore-defaults?patientId=PATIENT_1",
+        { method: "POST" },
+      );
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(json.data.thresholds, {
+        patientId: "PATIENT_1",
+        ...defaultThresholds,
+      });
     });
   });
 });
