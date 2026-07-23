@@ -1,17 +1,10 @@
-import type { OverviewResponse } from "../api";
+import type { OverviewHealthStatusValue } from "../api";
 import type { MetricStatus } from "../types";
 
-export function getHeartRateStatus(value: number, thresholds: OverviewResponse["thresholds"]): MetricStatus {
-  if (!thresholds) return "warning";
-  if (value < thresholds.heartRateMin || value > thresholds.heartRateMax) return "critical";
-  return "normal";
-}
-
-export function getSpo2Status(value: number, thresholds: OverviewResponse["thresholds"]): MetricStatus {
-  if (!thresholds) return "warning";
-  if (value < thresholds.spo2Min) return "critical";
-  if (value > thresholds.spo2Max) return "warning";
-  return "normal";
+export function toMetricStatus(status: OverviewHealthStatusValue): MetricStatus {
+  if (status === "ABNORMAL") return "critical";
+  if (status === "NORMAL") return "normal";
+  return "warning";
 }
 
 export function statusLabel(status: MetricStatus) {
