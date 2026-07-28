@@ -1,8 +1,14 @@
-// #ifndef NETWORK_PROV_HELPER_H
-// #define NETWORK_PROV_HELPER_H
+#ifndef NETWORK_PROV_HELPER_H
+#define NETWORK_PROV_HELPER_H
 
-// #include "esp_err.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-// bool wifi_prov_is_provisioned(void);
+void network_prov_provision();
 
-// #endif
+#ifdef __cplusplus
+}
+#endif
+
+#endif

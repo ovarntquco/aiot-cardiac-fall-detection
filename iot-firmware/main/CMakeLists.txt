@@ -1,5 +1,5 @@
 idf_component_register(
     SRCS "main.c"
-    PRIV_REQUIRES network_prov_helper
+    PRIV_REQUIRES pipeline
     INCLUDE_DIRS "."
 )

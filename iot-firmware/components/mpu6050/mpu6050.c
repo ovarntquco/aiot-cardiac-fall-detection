@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <sys/time.h>
@@ -5,7 +6,7 @@
 
 #include "driver/i2c_master.h"
 
-#include "include/mpu6050.h"
+#include "mpu6050.h"
 
 /* MPU6050 register */
 #define MPU6050_GYRO_CONFIG     0x1Bu
@@ -19,53 +20,66 @@ typedef struct {
     i2c_master_dev_handle_t i2c_dev;
 } mpu6050_dev_t;
 
-static esp_err_t mpu6050_write(mpu6050_handle_t sensor,
-                               const uint8_t reg_start_addr,
-                               const uint8_t *const data_buf,
-                               const uint8_t data_len) {
-    mpu6050_dev_t *sens = (mpu6050_dev_t *) sensor;
-    uint8_t buffer[data_len + 1];
-    
-    buffer[0] = reg_start_addr;
-    memcpy(&buffer[1], data_buf, data_len);
+static esp_err_t mpu6050_write(
+    mpu6050_handle_t sensor,
+    const uint8_t reg_addr,
+    const uint8_t* const data_buff,
+    size_t data_len
+) {
+    mpu6050_dev_t* sens = sensor;
+    uint8_t* buffer = malloc(sizeof(*buffer) * (data_len + 1));
+    if (NULL == buffer)
+        return ESP_ERR_NO_MEM;
 
-    return i2c_master_transmit(sens->i2c_dev,
-                               buffer,
-                               sizeof(buffer),
-                               -1);
+    buffer[0] = reg_addr;
+    memcpy(&buffer[1], data_buff, data_len);
+
+    esp_err_t ret = i2c_master_transmit(
+        sens->i2c_dev,
+        buffer,
+        data_len + 1,
+        -1
+    );
+
+    free(buffer);
+    return ret;
 }
 
-static esp_err_t mpu6050_read(mpu6050_handle_t sensor,
-                              const uint8_t reg_start_addr,
-                              uint8_t *const data_buf,
-                              const uint8_t data_len) {
-    mpu6050_dev_t *sens = (mpu6050_dev_t *) sensor;
+static esp_err_t mpu6050_read(
+    mpu6050_handle_t sensor,
+    const uint8_t reg_addr,
+    uint8_t* const data_buff,
+    size_t data_len
+) {
+    mpu6050_dev_t* sens = sensor;
 
-    return i2c_master_transmit_receive(sens->i2c_dev,
-                                       &reg_start_addr,
-                                       1,
-                                       data_buf,
-                                       data_len,
-                                       -1);
+    return i2c_master_transmit_receive(
+        sens->i2c_dev, 
+        &reg_addr,
+        1, 
+        data_buff,
+        data_len,
+        -1
+    );
 }
 
 mpu6050_handle_t mpu6050_create(i2c_master_dev_handle_t dev) {
-    mpu6050_dev_t *sensor = (mpu6050_dev_t *) calloc(1, sizeof(mpu6050_dev_t));
+    mpu6050_dev_t* sensor = calloc(1, sizeof(*sensor));
     sensor->i2c_dev = dev;
 
     return (mpu6050_handle_t) sensor;
 }
 
 void mpu6050_delete(mpu6050_handle_t sensor) {
-    mpu6050_dev_t *sens = (mpu6050_dev_t *) sensor;
+    mpu6050_dev_t* sens = sensor;
     free(sens);
 }
 
-esp_err_t mpu6050_get_deviceid(mpu6050_handle_t sensor, uint8_t *const deviceid) {
+esp_err_t mpu6050_get_deviceid(mpu6050_handle_t sensor, uint8_t* const deviceid) {
     return mpu6050_read(sensor, MPU6050_WHO_AM_I, deviceid, 1);
 }
 
-esp_err_t mpu6050_wake_up(mpu6050_handle_t sensor) {
+esp_err_t mpu6050_wakeup(mpu6050_handle_t sensor) {
     esp_err_t ret;
     uint8_t tmp;
 
@@ -79,7 +93,7 @@ esp_err_t mpu6050_wake_up(mpu6050_handle_t sensor) {
     return ret;
 }
 
-esp_err_t mpu6050_sleep(mpu6050_handle_t sensor) {
+esp_err_t mpu6050_shutdown(mpu6050_handle_t sensor) {
     esp_err_t ret;
     uint8_t tmp;
 
@@ -124,7 +138,7 @@ esp_err_t mpu6050_get_acce_sensitivity(mpu6050_handle_t sensor, float *const acc
     return ret;
 }
 
-esp_err_t mpu6050_get_gyro_sensitivity(mpu6050_handle_t sensor, float *const gyro_sensitivity) {
+esp_err_t mpu6050_get_gyro_sensitivity(mpu6050_handle_t sensor, float* const gyro_sensitivity) {
     esp_err_t ret;
     uint8_t gyro_fs;
 
@@ -150,7 +164,7 @@ esp_err_t mpu6050_get_gyro_sensitivity(mpu6050_handle_t sensor, float *const gyr
     return ret;
 }
 
-esp_err_t mpu6050_get_raw_acce(mpu6050_handle_t sensor, mpu6050_raw_acce_value_t *const raw_acce_value) {
+esp_err_t mpu6050_get_raw_acce(mpu6050_handle_t sensor, mpu6050_raw_acce_value_t* const raw_acce_value) {
     uint8_t data_rd[6];
     esp_err_t ret = mpu6050_read(sensor, MPU6050_ACCEL_XOUT_H, data_rd, sizeof(data_rd));
     
@@ -160,7 +174,7 @@ esp_err_t mpu6050_get_raw_acce(mpu6050_handle_t sensor, mpu6050_raw_acce_value_t
     return ret;
 }
 
-esp_err_t mpu6050_get_raw_gyro(mpu6050_handle_t sensor, mpu6050_raw_gyro_value_t *const raw_gyro_value) {
+esp_err_t mpu6050_get_raw_gyro(mpu6050_handle_t sensor, mpu6050_raw_gyro_value_t* const raw_gyro_value) {
     uint8_t data_rd[6];
     esp_err_t ret = mpu6050_read(sensor, MPU6050_GYRO_XOUT_H, data_rd, sizeof(data_rd));
     
@@ -170,17 +184,17 @@ esp_err_t mpu6050_get_raw_gyro(mpu6050_handle_t sensor, mpu6050_raw_gyro_value_t
     return ret;
 }
 
-esp_err_t mpu6050_get_acce(mpu6050_handle_t sensor, mpu6050_acce_value_t *const acce_value) {
+esp_err_t mpu6050_get_acce(mpu6050_handle_t sensor, mpu6050_acce_value_t* const acce_value) {
     esp_err_t ret;
     float acce_sensitivity;
     mpu6050_raw_acce_value_t raw_acce;
 
     ret = mpu6050_get_acce_sensitivity(sensor, &acce_sensitivity);
-    if (ret != ESP_OK) {
+    if (ESP_OK != ret) {
         return ret;
     }
     ret = mpu6050_get_raw_acce(sensor, &raw_acce);
-    if (ret != ESP_OK) {
+    if (ESP_OK != ret) {
         return ret;
     }
 
@@ -190,17 +204,17 @@ esp_err_t mpu6050_get_acce(mpu6050_handle_t sensor, mpu6050_acce_value_t *const 
     return ESP_OK;
 }
 
-esp_err_t mpu6050_get_gyro(mpu6050_handle_t sensor, mpu6050_gyro_value_t *const gyro_value) {
+esp_err_t mpu6050_get_gyro(mpu6050_handle_t sensor, mpu6050_gyro_value_t* const gyro_value) {
     esp_err_t ret;
     float gyro_sensitivity;
     mpu6050_raw_gyro_value_t raw_gyro;
 
     ret = mpu6050_get_gyro_sensitivity(sensor, &gyro_sensitivity);
-    if (ret != ESP_OK) {
+    if (ESP_OK != ret) {
         return ret;
     }
     ret = mpu6050_get_raw_gyro(sensor, &raw_gyro);
-    if (ret != ESP_OK) {
+    if (ESP_OK != ret) {
         return ret;
     }
 
