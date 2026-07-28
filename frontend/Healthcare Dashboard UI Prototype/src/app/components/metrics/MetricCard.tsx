@@ -34,8 +34,8 @@ export function MetricCard({
   };
 
   return (
-    <div className="bg-card rounded-lg border border-border p-6 flex flex-col gap-5">
-      <div className="flex items-start justify-between">
+    <div className="flex flex-col gap-5 rounded-lg border border-border bg-card p-4 sm:p-6">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${color}18` }}>
@@ -44,7 +44,7 @@ export function MetricCard({
             <span className="text-sm font-medium text-muted-foreground">{label}</span>
           </div>
           <div className="flex items-end gap-1.5">
-            <span className="text-4xl font-bold text-foreground" style={{ fontFamily: "'DM Mono', monospace" }}>
+            <span className="text-3xl font-bold text-foreground sm:text-4xl" style={{ fontFamily: "'DM Mono', monospace" }}>
               {value}
             </span>
             <span className="text-base text-muted-foreground mb-1">{unit}</span>

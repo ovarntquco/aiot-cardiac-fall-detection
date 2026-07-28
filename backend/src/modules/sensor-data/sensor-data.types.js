@@ -1,10 +1,11 @@
 /**
- * UC2 / FR2-FR3 placeholder types.
- * TODO: validate and persist wearable sensor samples when ingestion is implemented.
+ * Minimal validated sensor-reading contract used by UC8.
+ * UC2 remains responsible for the real device transport and collection cadence.
  * @typedef {Object} SensorSampleInput
+ * @property {string} id
  * @property {string} patientId
- * @property {number=} heartRate
- * @property {number=} spo2
+ * @property {number} heartRate
+ * @property {number} spo2
  * @property {string} measuredAt
  */
 

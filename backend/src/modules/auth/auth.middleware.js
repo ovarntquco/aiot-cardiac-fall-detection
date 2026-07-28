@@ -1,6 +1,6 @@
 import { sendJson } from "../../http/response.js";
 
-// Supporting infrastructure for UC3/FR4 and UC4/FR5 only.
+// Supporting infrastructure for the currently implemented UC3, UC4, and UC7 routes.
 // TODO(UC1/FR1): replace this dev adapter with production authentication.
 export function createAuthMiddleware(repository) {
   return async function authenticate(req, res) {
@@ -38,6 +38,10 @@ export function ensurePatientAccess(req, res, user) {
   const requestedPatientId = new URL(req.url, "http://localhost").searchParams.get("patientId");
   const patientId = requestedPatientId || user.primaryPatientId;
 
+  return ensurePatientIdAccess(res, user, patientId);
+}
+
+export function ensurePatientIdAccess(res, user, patientId) {
   if (!user.accessiblePatientIds.includes(patientId)) {
     sendJson(res, 403, {
       success: false,
@@ -50,4 +54,19 @@ export function ensurePatientAccess(req, res, user) {
   }
 
   return patientId;
+}
+
+export function ensureCaregiverRole(res, user) {
+  if (user.role !== "caregiver") {
+    sendJson(res, 403, {
+      success: false,
+      error: {
+        code: "FORBIDDEN",
+        message: "Only an authorized caregiver can manage personal thresholds.",
+      },
+    });
+    return false;
+  }
+
+  return true;
 }

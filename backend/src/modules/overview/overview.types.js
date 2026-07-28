@@ -5,6 +5,18 @@
  * @property {number} spo2
  * @property {string} measuredAt
  *
+ * @typedef {"NORMAL" | "ABNORMAL" | "UNKNOWN"} HealthStatusValue
+ *
+ * @typedef {Object} OverviewHealthStatus
+ * @property {HealthStatusValue} overall
+ * @property {HealthStatusValue} heartRate
+ * @property {HealthStatusValue} spo2
+ *
+ * @typedef {Object} DataFreshness
+ * @property {boolean} isStale
+ * @property {number | null} ageSeconds
+ * @property {number} staleAfterSeconds
+ *
  * @typedef {Object} PersonalThresholds
  * @property {number} heartRateMin
  * @property {number} heartRateMax

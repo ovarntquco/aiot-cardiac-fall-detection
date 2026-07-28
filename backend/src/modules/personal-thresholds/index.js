@@ -1,16 +1,13 @@
 import { route } from "../../http/router.js";
-import { sendFeatureNotImplemented } from "../shared/not-implemented.js";
+import { createPersonalThresholdsController } from "./personal-thresholds.controller.js";
 
-// UC7 / FR9-FR11: Personal threshold management. Placeholder only.
-export function createPersonalThresholdsModule() {
+// UC7 / FR9-FR11: Authorized personal threshold management.
+export function createPersonalThresholdsModule(context) {
+  const controller = createPersonalThresholdsController(context);
+
   return [
-    route("GET", "/api/personal-thresholds", ({ res }) => sendFeatureNotImplemented(res, {
-      useCase: "UC7",
-      requirements: ["FR9", "FR10", "FR11"],
-    })),
-    route("PUT", "/api/personal-thresholds", ({ res }) => sendFeatureNotImplemented(res, {
-      useCase: "UC7",
-      requirements: ["FR9", "FR10", "FR11"],
-    })),
+    route("GET", "/api/personal-thresholds", controller.show),
+    route("PUT", "/api/personal-thresholds", controller.update),
+    route("POST", "/api/personal-thresholds/restore-defaults", controller.restore),
   ];
 }
