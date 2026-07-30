@@ -62,7 +62,7 @@ export async function findByCaregiverAccountId(caregiverAccountId) {
     .from('accounts')
     .select(ACCOUNT_SELECTED)
     .eq('caregiver_account_id', caregiverAccountId);
-
+  
   if (error) {
     throw new Error(error.message);
   }

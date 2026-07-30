@@ -6,11 +6,8 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.1",
     "express-validator": "^7.3.2",
-    "jsonwebtoken": "^9.0.3",
-    "lru-cache": "^11.5.2",
-    "mqtt": "^5.15.2"
+    "jsonwebtoken": "^9.0.3"
   },
   "scripts": {
     "devStart": "nodemon src/server.js"
@@ -19,8 +16,5 @@
   "devDependencies": {
     "nodemon": "^3.1.14",
     "supabase": "^2.110.0"
-  },
-  "allowScripts": {
-    "bcrypt@6.0.0": true
   }
 }
