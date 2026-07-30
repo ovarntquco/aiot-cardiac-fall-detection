@@ -1,25 +1,14 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "name": "carewatch-backend",
+  "version": "0.1.0",
+  "private": true,
   "type": "module",
-  "dependencies": {
-    "@prisma/client": "^7.8.0",
-    "bcrypt": "^6.0.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "fastapi": "^0.0.8",
-    "jsonwebtoken": "^9.0.3"
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
   },
-  "devDependencies": {
-    "prisma": "^7.8.0"
+  "engines": {
+    "node": ">=18"
   }
 }
