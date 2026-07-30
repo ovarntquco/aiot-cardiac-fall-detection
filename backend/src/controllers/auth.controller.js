@@ -30,7 +30,7 @@ export async function register(req, res, next) {
     
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user);
-    await RefreshToken.create(user.id, refreshToken, refreshExpiryDate());
+    await RefreshToken.create({ userId: user.id, token: refreshToken, expiresAt: refreshExpiryDate() });
     
     res
     .cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS)
@@ -57,7 +57,7 @@ export async function login(req, res, next) {
 
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user);
-    await RefreshToken.create(user.id, refreshToken, refreshExpiryDate());
+    await RefreshToken.create({ userId: user.id, token: refreshToken, expiresAt: refreshExpiryDate() });
 
     res
       .cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS)
@@ -93,7 +93,7 @@ export async function refresh(req, res, next) {
 
     await RefreshToken.remove(token);
     const newRefreshToken = signRefreshToken(user);
-    await RefreshToken.create(user.id, newRefreshToken, refreshExpiryDate());
+    await RefreshToken.create({ userId: user.id, token: newRefreshToken, expiresAt: refreshExpiryDate() });
 
     const accessToken = signAccessToken(user);
 

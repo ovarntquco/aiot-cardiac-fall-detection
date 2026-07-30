@@ -3,7 +3,7 @@ import supabase from '../config/supabase.js';
 export async function create({ userId, token, expiresAt }) {
   const { error } = await supabase
     .from('refresh_tokens')
-    .insert({ token, user_id: userId, expires_at: expiresAt});
+    .insert({ token, user_id: userId, expires_at: expiresAt });
 
   if (error) {
     throw new Error(error.message);
