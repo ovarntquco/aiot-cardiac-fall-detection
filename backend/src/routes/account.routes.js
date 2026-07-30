@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import authenticateJWT from '../middleware/authenticateJWT.js';
 import attachAccount from '../middleware/attachAccount.js';
-import validate from '../middleware/validate.js';
 import {
   createAccountValidators,
   assignCaregiverValidators,
   updateVitalsThresholdsValidators
 } from '../validators/account.validator.js';
+import validate from '../middleware/validate.js';
 import {
   createAccount,
   getMyAccount,
