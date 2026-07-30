@@ -6,6 +6,11 @@ const ALLOWED_FIELDS = [ 'hrLow', 'hrHigh', 'spo2Low' ];
 export async function createAccount(req, res, next) {
   try {
     const userId = req.user.id;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'Missing user id in req' });
+    }
+
     const { fullName, dateOfBirth, sex, height, weight } = req.body;
     const account = await Account.create({ userId, fullName, dateOfBirth, sex, height, weight });
 
@@ -30,7 +35,7 @@ export async function getMyAccount(req, res, next) {
     const accountId = req.user.accountId;
 
     if (!accountId) {
-      return res.status(404).json({ message: 'Account id not found' });
+      return res.status(400).json({ message: 'Missing account id in req' });
     }
 
     const account = await Account.findById(accountId);
@@ -39,21 +44,7 @@ export async function getMyAccount(req, res, next) {
       return res.status(404).json({ message: 'Account not found' });
     }
 
-    res.json({
-      account: {
-        id: account.id,
-        fullName: account.full_name,
-        dateOfBirth: account.date_of_birth,
-        sex: account.sex,
-        height: account.height,
-        weight: account.weight,
-        hrLow: account.hr_low,
-        hrHigh: account.hr_high,
-        spo2Low: account.spo2_low,
-        caregiverAccountId: account.caregiver_account_id,
-        chatId: account.chat_id,
-      },
-    });
+    res.json({ account });
   } catch (err) {
     next(err);
   }
@@ -64,7 +55,7 @@ export async function getAllPatientAccounts(req, res, next) {
     const caregiverAccountId = req.user.accountId;
 
     if (!caregiverAccountId) {
-      return res.status(404).json({ message: 'Account id not found'});
+      return res.status(400).json({ message: 'Missing account id in req' });
     }
 
     const caregiver = await Account.findById(caregiverAccountId);
@@ -73,7 +64,7 @@ export async function getAllPatientAccounts(req, res, next) {
       return res.status(404).json({ message: 'Account not found' });
     }
     if (caregiver.user.role !== 'caregiver') {
-      return res.status(400).json({ message: 'Only caregiver can see their patients' });
+      return res.status(403).json({ message: 'Only caregiver can see their patients' });
     }
 
     const patients = await Account.findByCaregiverAccountId(caregiverAccountId);
@@ -87,6 +78,11 @@ export async function getAllPatientAccounts(req, res, next) {
 export async function assignCaregiver(req, res, next) {
   try {
     const { caregiverAccountId } = req.body;
+    
+    if (!caregiverAccountId) {
+      return res.status(400).json({ message: 'Missing account id in req' });
+    }
+
     const userId = req.user.id;
 
     if (req.user.role !== 'patient') {
@@ -99,7 +95,7 @@ export async function assignCaregiver(req, res, next) {
       return res.status(404).json({ message: 'Account not found' });
     }
     if (caregiver.user.role !== 'caregiver') {
-      return res.status(400).json({ message: 'Selected account is not a caregiver' });
+      return res.status(403).json({ message: 'Selected account is not a caregiver' });
     }
 
     const updated = await Account.assignCaregiver({ id: req.user.accountId, caregiverAccountId });
@@ -165,7 +161,7 @@ export async function updateChatId(req, res, next) {
     const accountId = req.user.accountId;
 
     if (!accountId) {
-      return res.status(404).json({ message: 'Account id not found' });
+      return res.status(400).json({ message: 'Missing account id in req' });
     }
     
     const account = await Account.findById(accountId);
