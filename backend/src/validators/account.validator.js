@@ -4,8 +4,8 @@ export const createAccountValidators = [
   body('fullName').notEmpty().withMessage('Full name must not be empty'),
   body('dateOfBirth').isDate().withMessage('Date of birth must be date'),
   body('sex').isIn(['male', 'female']).withMessage('Sex must be male or female'),
-  body('height').isFloat({ min: 1.0 }).withMessage('Height must be greater than 0'),
-  body('weight').isFloat({ min: 1.0 }).withMessage('Weight must be greater than 0'),
+  body('height').isInt({ min: 1.0 }).withMessage('Height must be greater than 0'),
+  body('weight').isInt({ min: 1.0 }).withMessage('Weight must be greater than 0'),
 ];
 
 export const assignCaregiverValidators = [
