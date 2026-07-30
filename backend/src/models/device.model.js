@@ -13,3 +13,18 @@ export async function create(patientAccountId) {
 
   return data;
 }
+
+export async function findById(deviceId) {
+    const { data, error } = await supabase
+      .from("devices")
+      .select("*")
+      .eq("id", deviceId)
+      .select()
+      .maybeSingle()
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
+}
