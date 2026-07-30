@@ -1,16 +1,20 @@
-import jwt from 'jsonwebtoken'
-import { env } from './env.js';
+import jwt from "jsonwebtoken";
+import { env } from "./env.js";
 
 export function signAccessToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
     env.JWT_ACCESS_SECRET,
-    { expiresIn: '1h' }
+    { expiresIn: "1h" },
   );
 }
 
 export function signRefreshToken(user) {
-  return jwt.sign({ id: user.id }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: user.id }, env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 }
 
 export function verifyAccessToken(token) {

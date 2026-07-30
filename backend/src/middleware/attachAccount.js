@@ -1,4 +1,4 @@
-import * as Account from '../models/account.model.js';
+import * as Account from "../models/account.model.js";
 
 export default async function attachAccount(req, res, next) {
   try {
@@ -6,7 +6,7 @@ export default async function attachAccount(req, res, next) {
     const account = await Account.findByUserId(userId);
 
     if (!account) {
-      return res.status(404).json({ message: 'Account not found' });
+      return res.status(404).json({ message: "Account not found" });
     }
 
     req.user.accountId = account.id;

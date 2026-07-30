@@ -1,5 +1,7 @@
-import { body } from 'express-validator';
+import { body } from "express-validator";
 
 export const createDeviceValidators = [
-  body('patientAccountId').isUUID().withMessage('Patient account id must be a valid id'),
+  body("patientAccountId")
+    .isUUID()
+    .withMessage("Patient account id must be a valid id"),
 ];

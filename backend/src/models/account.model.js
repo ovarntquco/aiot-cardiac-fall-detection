@@ -1,26 +1,40 @@
 import supabase from "../config/supabase.js";
 
 const ACCOUNT_SELECTED = [
-  'id',
-  'user:users(role)',
-  'full_name',
-  'date_of_birth',
-  'sex',
-  'height',
-  'weight',
-  'hr_low',
-  'hr_high',
-  'spo2_low',
-  'caregiver_account_id',
-  'chat_id'
-].join(', ');
+  "id",
+  "user:users(role)",
+  "full_name",
+  "date_of_birth",
+  "sex",
+  "height",
+  "weight",
+  "hr_low",
+  "hr_high",
+  "spo2_low",
+  "caregiver_account_id",
+  "chat_id",
+].join(", ");
 
-export async function create({ userId, fullName, dateOfBirth, sex, height, weight }) {
+export async function create({
+  userId,
+  fullName,
+  dateOfBirth,
+  sex,
+  height,
+  weight,
+}) {
   const { data, error } = await supabase
-    .from('accounts')
-    .insert({ user_id: userId, full_name: fullName, date_of_birth: dateOfBirth, sex, height, weight })
+    .from("accounts")
+    .insert({
+      user_id: userId,
+      full_name: fullName,
+      date_of_birth: dateOfBirth,
+      sex,
+      height,
+      weight,
+    })
     .select()
-    .single()
+    .single();
 
   if (error) {
     throw new Error(error.message);
@@ -31,9 +45,9 @@ export async function create({ userId, fullName, dateOfBirth, sex, height, weigh
 
 export async function findById(id) {
   const { data, error } = await supabase
-    .from('accounts')
+    .from("accounts")
     .select(ACCOUNT_SELECTED)
-    .eq('id', id)
+    .eq("id", id)
     .maybeSingle();
 
   if (error) {
@@ -45,9 +59,9 @@ export async function findById(id) {
 
 export async function findByUserId(userId) {
   const { data, error } = await supabase
-    .from('accounts')
-    .select('id')
-    .eq('user_id', userId)
+    .from("accounts")
+    .select("id")
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
@@ -59,10 +73,10 @@ export async function findByUserId(userId) {
 
 export async function findByCaregiverAccountId(caregiverAccountId) {
   const { data, error } = await supabase
-    .from('accounts')
+    .from("accounts")
     .select(ACCOUNT_SELECTED)
-    .eq('caregiver_account_id', caregiverAccountId);
-  
+    .eq("caregiver_account_id", caregiverAccountId);
+
   if (error) {
     throw new Error(error.message);
   }
@@ -72,11 +86,11 @@ export async function findByCaregiverAccountId(caregiverAccountId) {
 
 export async function update({ id, updates }) {
   const { data, error } = await supabase
-    .from('accounts')
+    .from("accounts")
     .update(updates)
-    .eq('id', id)
+    .eq("id", id)
     .select()
-    .single()
+    .single();
 
   if (error) {
     throw new Error(error.message);
@@ -90,7 +104,10 @@ export async function assignCaregiver({ id, caregiverAccountId }) {
 }
 
 export async function updateVitalsThresholds({ id, hrLow, hrHigh, spo2Low }) {
-  return update({ id, updates: { hr_low: hrLow, hr_high: hrHigh, spo2_low: spo2Low } });
+  return update({
+    id,
+    updates: { hr_low: hrLow, hr_high: hrHigh, spo2_low: spo2Low },
+  });
 }
 
 export async function updateChatId({ id, chatId }) {

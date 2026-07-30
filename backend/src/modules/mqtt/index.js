@@ -1,0 +1,42 @@
+import { onTopic } from "../../config/mqtt.js";
+import { env } from "../../config/env.js";
+import MqttRouter from "./router.js";
+import {
+  parseJson,
+  logMessage,
+  validateDevice,
+  validateCardiacPayload,
+  validateGpsPayload,
+} from "./middlewares.js";
+import handleCardiac from "./handlers/cardiac.handler.js";
+import handleGps from "./handlers/gps.handler.js";
+
+const router = MqttRouter();
+
+router.use(logMessage);
+router.use(parseJson);
+
+router.on(
+  env.MQTT_TOPICS.CARDIAC,
+  validateDevice,
+  validateCardiacPayload,
+  handleCardiac,
+);
+router.on(env.MQTT_TOPICS.MOTION, validateDevice, handleMotion);
+router.on(env.MQTT_TOPICS.GPS, validateDevice, validateGpsPayload, handleGps);
+router.on(
+  env.MQTT_TOPICS.EVENT,
+  validateDevice,
+  validateEventPayload,
+  handleEvent,
+);
+
+export function initMqttRouter() {
+  Object.values().forEach((topic) => {
+    onTopic(topic, (message, topicName) => {
+      router.handle(topicName, message).catch((err) => {
+        console.error(`[MQTT] Handler error for ${topicName}:`, err);
+      });
+    });
+  });
+}

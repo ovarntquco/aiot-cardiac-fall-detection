@@ -1,5 +1,5 @@
-import * as Device from '../models/device.model.js';
-import * as Account from '../models/account.model.js';
+import * as Device from "../models/device.model.js";
+import * as Account from "../models/account.model.js";
 
 export async function createDevice(req, res, next) {
   try {
@@ -7,19 +7,18 @@ export async function createDevice(req, res, next) {
     const patient = await Account.findById(patientAccountId);
 
     if (!patient) {
-      return res.status(404).json({ message: 'Patient\'s account not found' });
+      return res.status(404).json({ message: "Patient's account not found" });
     }
-    if (patient.user.role !== 'patient') {
-      return res.status(403).json({ message: 'Only add patient account id' });
+    if (patient.user.role !== "patient") {
+      return res.status(403).json({ message: "Only add patient account id" });
     }
 
     const device = await Device.create(patientAccountId);
 
-    res
-      .json({
-        message: 'Device created successfully',
-        device,
-      });
+    res.json({
+      message: "Device created successfully",
+      device,
+    });
   } catch (err) {
     next(err);
   }

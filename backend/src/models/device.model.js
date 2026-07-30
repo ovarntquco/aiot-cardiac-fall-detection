@@ -1,12 +1,12 @@
-import supabase from '../config/supabase.js';
+import supabase from "../config/supabase.js";
 
 export async function create(patientAccountId) {
   const { data, error } = await supabase
-    .from('devices')
+    .from("devices")
     .insert({ patient_account_id: patientAccountId })
     .select()
     .single();
-  
+
   if (error) {
     throw new Error(error.message);
   }
@@ -15,16 +15,16 @@ export async function create(patientAccountId) {
 }
 
 export async function findById(deviceId) {
-    const { data, error } = await supabase
-      .from('devices')
-      .select('*')
-      .eq('id', deviceId)
-      .select()
-      .maybeSingle()
+  const { data, error } = await supabase
+    .from("devices")
+    .select("*")
+    .eq("id", deviceId)
+    .select()
+    .maybeSingle();
 
-    if (error) {
-      throw new Error(error.message);
-    }
+  if (error) {
+    throw new Error(error.message);
+  }
 
-    return data;
+  return data;
 }

@@ -1,8 +1,8 @@
-import supabase from '../config/supabase.js';
+import supabase from "../config/supabase.js";
 
 export async function create({ userId, token, expiresAt }) {
   const { error } = await supabase
-    .from('refresh_tokens')
+    .from("refresh_tokens")
     .insert({ token, user_id: userId, expires_at: expiresAt });
 
   if (error) {
@@ -12,9 +12,9 @@ export async function create({ userId, token, expiresAt }) {
 
 export async function findByToken(token) {
   const { data, error } = await supabase
-    .from('refresh_tokens')
-    .select('*')
-    .eq('token', token)
+    .from("refresh_tokens")
+    .select("*")
+    .eq("token", token)
     .maybeSingle();
 
   if (error) {
@@ -26,9 +26,9 @@ export async function findByToken(token) {
 
 export async function remove(token) {
   const { error } = await supabase
-    .from('refresh_tokens')
+    .from("refresh_tokens")
     .delete()
-    .eq('token', token);
+    .eq("token", token);
 
   if (error) {
     throw new Error(error.message);
@@ -37,10 +37,10 @@ export async function remove(token) {
 
 export async function removeAllTokensForUser(userId) {
   const { error } = await supabase
-    .from('refresh_tokens')
+    .from("refresh_tokens")
     .delete()
-    .eq('user_id', userId);
-  
+    .eq("user_id", userId);
+
   if (error) {
     throw new Error(error.message);
   }

@@ -1,8 +1,8 @@
-import supabase from '../config/supabase.js';
+import supabase from "../config/supabase.js";
 
 export async function create({ email, passwordHash, role }) {
   const { data, error } = await supabase
-    .from('users')
+    .from("users")
     .insert({ email, password_hash: passwordHash, role })
     .select()
     .single();
@@ -16,9 +16,9 @@ export async function create({ email, passwordHash, role }) {
 
 export async function findByEmail(email) {
   const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('email', email)
+    .from("users")
+    .select("*")
+    .eq("email", email)
     .maybeSingle();
 
   if (error) {
@@ -30,9 +30,9 @@ export async function findByEmail(email) {
 
 export async function findById(id) {
   const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', id)
+    .from("users")
+    .select("*")
+    .eq("id", id)
     .maybeSingle();
 
   if (error) {
