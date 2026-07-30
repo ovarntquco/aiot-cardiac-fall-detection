@@ -5,6 +5,11 @@ const requireEnvVars = [
   'SUPABASE_SERVICE_KEY',
   'JWT_ACCESS_SECRET',
   'JWT_REFRESH_SECRET',
+  'MQTT_HOST',
+  'MQTT_USERNAME',
+  'MQTT_PASSWORD',
+  'MQTT_TOPICS',
+  'SUPABASE_PRIVATE_CHANNEL'
 ]
 
 const missing = requireEnvVars.filter((key) => !process.env[key]);
@@ -25,6 +30,6 @@ export const env = {
   MQTT_USERNAME: process.env.MQTT_USERNAME,
   MQTT_PASSWORD: process.env.MQTT_PASSWORD,
   MQTT_TOPICS: process.env.MQTT_TOPICS,
-  MQTT_PORT: process.env.MQTT_PORT,
+  MQTT_PORT: process.env.MQTT_PORT || '8883',
   SUPABASE_PRIVATE_CHANNEL: process.env.SUPABASE_PRIVATE_CHANNEL
 };
