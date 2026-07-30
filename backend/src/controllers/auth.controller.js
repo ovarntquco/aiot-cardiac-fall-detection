@@ -33,9 +33,9 @@ export async function register(req, res, next) {
     await RefreshToken.create({ userId: user.id, token: refreshToken, expiresAt: refreshExpiryDate() });
     
     res
-    .cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS)
-    .status(201)
-    .json({ accessToken, user: { id: user.id, email: user.email, role: user.role } });
+      .cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS)
+      .status(201)
+      .json({ accessToken, user: { id: user.id, email: user.email, role: user.role } });
   } catch (err) {
     next(err);
   }
