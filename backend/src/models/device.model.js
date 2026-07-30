@@ -12,6 +12,8 @@ export async function create(patientAccountId) {
   }
 
   return data;
+<<<<<<< HEAD
+=======
 }
 
 export async function findById(deviceId) {
@@ -27,4 +29,5 @@ export async function findById(deviceId) {
     }
 
     return data;
+>>>>>>> b1707b4413818e797312e58af84f9c8f6db5db64
 }
