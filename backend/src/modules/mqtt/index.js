@@ -15,7 +15,7 @@ import handleMotion from "./handlers/motion.handler.js";
 import handleGps from "./handlers/gps.handler.js";
 import handleEvent from "./handlers/event.handler.js";
 
-const router = MqttRouter();
+const router = new MqttRouter();
 
 router.use(logMessage);
 router.use(parseJson);
@@ -40,8 +40,8 @@ router.on(
   handleEvent,
 );
 
-export function initMqttRouter() {
-  Object.values().forEach((topic) => {
+export default function initMqttRouter() {
+  Object.values(env.MQTT_TOPICS).forEach((topic) => {
     onTopic(topic, (message, topicName) => {
       router.handle(topicName, message).catch((err) => {
         console.error(`[MQTT] Handler error for ${topicName}:`, err);

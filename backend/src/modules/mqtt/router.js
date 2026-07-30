@@ -50,7 +50,7 @@ class MqttRouter {
         return;
       }
 
-      const handler = handlers[i];
+      const handler = handlers[i++];
       await handler(ctx, next);
     };
     await next();

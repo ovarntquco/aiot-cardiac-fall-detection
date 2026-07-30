@@ -1,4 +1,4 @@
-import supabase from "../config/supabase";
+import supabase from "../config/supabase.js";
 
 export async function create({ deviceId, heartRate, spo2, recordedAt }) {
   const { data, error } = await supabase

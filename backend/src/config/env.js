@@ -5,6 +5,13 @@ const requireEnvVars = [
   "SUPABASE_SERVICE_KEY",
   "JWT_ACCESS_SECRET",
   "JWT_REFRESH_SECRET",
+  "MQTT_BROKER_URL",
+  "MQTT_USERNAME",
+  "MQTT_PASSWORD",
+  "CARDIAC_TOPIC",
+  "MOTION_TOPIC",
+  "GPS_TOPIC",
+  "EVENT_TOPIC",
 ];
 
 const missing = requireEnvVars.filter((key) => !process.env[key]);
@@ -23,10 +30,13 @@ export const env = {
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
   PORT: process.env.PORT || 8080,
   NODE_ENV: process.env.NODE_ENV || "development",
-  MQTT_HOST: process.env.MQTT_HOST,
+  MQTT_BROKER_URL: process.env.MQTT_BROKER_URL,
   MQTT_USERNAME: process.env.MQTT_USERNAME,
   MQTT_PASSWORD: process.env.MQTT_PASSWORD,
-  MQTT_TOPICS: process.env.MQTT_TOPICS,
-  MQTT_PORT: process.env.MQTT_PORT,
-  SUPABASE_PRIVATE_CHANNEL: process.env.SUPABASE_PRIVATE_CHANNEL,
+  MQTT_TOPICS: {
+    CARDIAC: process.env.CARDIAC_TOPIC,
+    MOTION: process.env.MOTION_TOPIC,
+    GPS: process.env.GPS_TOPIC,
+    EVENT: process.env.EVENT_TOPIC,
+  },
 };

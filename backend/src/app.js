@@ -7,7 +7,10 @@ import accountRoutes from "./routes/account.routes.js";
 import deviceRoutes from "./routes/device.routes.js";
 import gpsRoute from "./routes/device.routes.js";
 
+import initMqttRouter from "./modules/mqtt/index.js";
+
 const app = express();
+initMqttRouter();
 
 app.use(express.json());
 app.use(cors());

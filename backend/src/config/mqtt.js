@@ -2,8 +2,6 @@ import mqtt from "mqtt";
 import { env } from "./env.js";
 
 const config = {
-  host: env.MQTT_HOST || "mqtt://localhost",
-  port: env.MQTT_PORT,
   username: env.MQTT_USERNAME,
   password: env.MQTT_PASSWORD,
   reconnectPeriod: 5000,
@@ -12,7 +10,7 @@ const config = {
 
 const handlers = new Map();
 
-const client = mqtt.connect(env.MQTT_HOST, config);
+const client = mqtt.connect(env.MQTT_BROKER_URL, config);
 
 client.on("connect", () => {
   console.log(`Connected to MQTT broker at ${config.port}`);
@@ -69,7 +67,7 @@ client.on("message", (topic, message) => {
 });
 
 client.on("error", (err) => {
-  console.error("MQTT error:", err.message);
+  console.error(`MQTT error:`, err.message);
 });
 
 client.on("reconnect", () => {
