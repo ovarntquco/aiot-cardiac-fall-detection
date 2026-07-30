@@ -6,10 +6,12 @@ import {
   logMessage,
   validateDevice,
   validateCardiacPayload,
+  validateMotionPayload,
   validateGpsPayload,
   validateEventPayload,
 } from "./middlewares.js";
 import handleCardiac from "./handlers/cardiac.handler.js";
+import handleMotion from "./handlers/motion.handler.js";
 import handleGps from "./handlers/gps.handler.js";
 import handleEvent from "./handlers/event.handler.js";
 
@@ -24,7 +26,12 @@ router.on(
   validateCardiacPayload,
   handleCardiac,
 );
-router.on(env.MQTT_TOPICS.MOTION, validateDevice, handleMotion);
+router.on(
+  env.MQTT_TOPICS.MOTION,
+  validateDevice,
+  validateMotionPayload,
+  handleMotion,
+);
 router.on(env.MQTT_TOPICS.GPS, validateDevice, validateGpsPayload, handleGps);
 router.on(
   env.MQTT_TOPICS.EVENT,

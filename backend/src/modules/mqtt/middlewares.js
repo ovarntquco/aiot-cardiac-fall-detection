@@ -57,6 +57,29 @@ export async function validateCardiacPayload(ctx, next) {
   await next();
 }
 
+export async function validateMotionPayload(ctx, next) {
+  const arrays = [
+    ctx.data.acceX,
+    ctx.data.acceY,
+    ctx.data.acceZ,
+    ctx.data.gyroX,
+    ctx.data.gyroY,
+    ctx.data.gyroZ,
+  ];
+
+  const valid =
+    arrays.every(Array.isArray) &&
+    arrays.every((a) => a.length > 0) &&
+    arrays.every((a) => a.length === arrays[0].length);
+
+  if (!valid) {
+    console.warn(`[MQTT] Mismatched or empty array lengths in payload on topic ${ctx.topic}, skipping batch`);
+    return;
+  }
+
+  await next();
+}
+
 export async function validateGpsPayload(ctx, next) {
   const { latitude, longitude } = ctx.data;
 
@@ -88,7 +111,7 @@ export async function validateEventPayload(ctx, next) {
     return;
   }
 
-  if (!['system', 'user'].includes(type)) {
+  if (!["system", "user"].includes(type)) {
     console.warn(`[MQTT] Invalid type: ${type}`);
     return;
   }
