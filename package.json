@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "lru-cache": "^11.5.2",
+    "mqtt": "^5.15.2"
+  }
+}
