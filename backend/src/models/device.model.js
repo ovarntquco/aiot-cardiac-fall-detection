@@ -1,4 +1,4 @@
-import supabase from "../config/supabase.js";
+import supabase from '../config/supabase.js';
 
 export async function create(patientAccountId) {
   const { data, error } = await supabase
@@ -12,15 +12,13 @@ export async function create(patientAccountId) {
   }
 
   return data;
-<<<<<<< HEAD
-=======
 }
 
 export async function findById(deviceId) {
     const { data, error } = await supabase
-      .from("devices")
-      .select("*")
-      .eq("id", deviceId)
+      .from('devices')
+      .select('*')
+      .eq('id', deviceId)
       .select()
       .maybeSingle()
 
@@ -29,5 +27,4 @@ export async function findById(deviceId) {
     }
 
     return data;
->>>>>>> b1707b4413818e797312e58af84f9c8f6db5db64
 }

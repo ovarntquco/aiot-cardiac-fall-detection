@@ -1,4 +1,4 @@
-import { verifyAccessToken } from "../config/token.js";
+import { verifyAccessToken } from '../config/token.js';
 
 export default function authenticateJWT(req, res, next) {
   const authHeader = req.headers.authorization;
