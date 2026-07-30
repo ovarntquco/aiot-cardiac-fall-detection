@@ -5,7 +5,7 @@ export function signAccessToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role },
     env.JWT_ACCESS_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: '1h' }
   );
 }
 
