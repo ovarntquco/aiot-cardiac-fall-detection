@@ -58,22 +58,25 @@ export async function validateCardiacPayload(ctx, next) {
 }
 
 export async function validateMotionPayload(ctx, next) {
-  const arrays = [
-    ctx.data.acceX,
-    ctx.data.acceY,
-    ctx.data.acceZ,
-    ctx.data.gyroX,
-    ctx.data.gyroY,
-    ctx.data.gyroZ,
-  ];
+  const { acceX, acceY, acceZ, gyroX, gyroY, gyroZ } = ctx.data;
 
-  const valid =
-    arrays.every(Array.isArray) &&
-    arrays.every((a) => a.length > 0) &&
-    arrays.every((a) => a.length === arrays[0].length);
+  const arrays = { acceX, acceY, acceZ, gyroX, gyroY, gyroZ };
+  const missing = Object.entries(arrays).filter(([, v]) => !Array.isArray(v));
 
-  if (!valid) {
-    console.warn(`[MQTT] Mismatched or empty array lengths in payload on topic ${ctx.topic}, skipping batch`);
+  if (missing.length > 0) {
+    console.warn(
+      `[MQTT] Missing/invalid array fields: ${missing.map(([k]) => k).join(", ")} on topic ${ctx.topic}`,
+    );
+    return;
+  }
+
+  const lengths = Object.values(arrays).map((arr) => arr.length);
+  const allSameLength = lengths.every((len) => len === lengths[0] && len > 0);
+
+  if (!allSameLength) {
+    console.warn(
+      `[MQTT] Mismatched or empty array lengths on topic ${ctx.topic}: ${lengths.join(", ")}`,
+    );
     return;
   }
 
