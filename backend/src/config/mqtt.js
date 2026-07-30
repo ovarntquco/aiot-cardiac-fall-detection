@@ -47,7 +47,8 @@ client.on("disconnect", () => {
     console.log("Disconnecting...")
 });
 
-function onTopic(topic, callback) {
+export async function onTopic(topic, callback) {
   handlers.set(topic, callback);
 }
 
+export default client;
