@@ -1,3 +1,12 @@
 node_modules
+<<<<<<< HEAD
 .env
 
+=======
+<<<<<<< HEAD
+.env
+=======
+.env
+
+>>>>>>> fdfe306 (feat(backend): add auth api)
+>>>>>>> b1707b4413818e797312e58af84f9c8f6db5db64
