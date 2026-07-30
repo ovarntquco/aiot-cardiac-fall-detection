@@ -7,9 +7,11 @@ import {
   validateDevice,
   validateCardiacPayload,
   validateGpsPayload,
+  validateEventPayload,
 } from "./middlewares.js";
 import handleCardiac from "./handlers/cardiac.handler.js";
 import handleGps from "./handlers/gps.handler.js";
+import handleEvent from "./handlers/event.handler.js";
 
 const router = MqttRouter();
 

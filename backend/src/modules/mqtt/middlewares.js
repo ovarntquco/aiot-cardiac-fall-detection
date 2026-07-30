@@ -79,3 +79,19 @@ export async function validateGpsPayload(ctx, next) {
 
   await next();
 }
+
+export async function validateEventPayload(ctx, next) {
+  const { type } = ctx.data;
+
+  if (!type) {
+    console.warn(`[MQTT] Missing type in payload in topic ${ctx.topic}`);
+    return;
+  }
+
+  if (!['system', 'user'].includes(type)) {
+    console.warn(`[MQTT] Invalid type: ${type}`);
+    return;
+  }
+
+  await next();
+}
