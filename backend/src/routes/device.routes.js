@@ -5,6 +5,6 @@ import { createDevice } from "../controllers/device.controller.js";
 
 const router = Router();
 
-router.post('/create', createDeviceValidators, validate, createDevice);
+router.post("/create", createDeviceValidators, validate, createDevice);
 
 export default router;
