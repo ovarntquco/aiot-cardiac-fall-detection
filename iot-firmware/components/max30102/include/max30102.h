@@ -15,16 +15,6 @@ extern "C" {
 #define MAX30102_REV_ID         0xFE
 #define MAX30102_PART_ID        0xFF
 
-#define SAMPLE_RATE_HZ      50    /* must match SPO2_CONFIG in the driver */
-#define FINGER_THRESHOLD    50000   /* IR below this = no finger present */
-#define RATE_AVG_SIZE       4
-
-#define FREQS       12.5
-#define BUFFER_SIZE 50
-#define MA4_SIZE    4
-
-#define SPO2_DECIMATION (SAMPLE_RATE_HZ / FREQS)
-
 typedef enum {
     SAMPLEAVG_1     = 0x00,
     SAMPLEAVG_2     = 0x20,
@@ -103,13 +93,17 @@ max30102_handle_t max30102_create(i2c_master_dev_handle_t dev);
 void max30102_delete(max30102_handle_t);
 esp_err_t max30102_wakeup(max30102_handle_t sensor);
 esp_err_t max30102_shutdown(max30102_handle_t sensor);
-esp_err_t max30102_config(max30102_handle_t sensor, max30102_mode_t mode, max30102_smp_avg_t sample_average, uint8_t rollover_en, max30102_fifo_a_full_t fifo_a_full, max30102_adc_rng_t adc_range, max30102_smp_rate_t sample_rate, max30102_led_pw_t pulse_width, max30102_led_pa_t pulse_amplitute);
+esp_err_t max30102_config(max30102_handle_t sensor, max30102_mode_t mode, max30102_smp_avg_t sample_average,
+                          uint8_t rollover_en, max30102_fifo_a_full_t fifo_a_full, max30102_adc_rng_t adc_range,
+                          max30102_smp_rate_t sample_rate, max30102_led_pw_t pulse_width, max30102_led_pa_t pulse_amplitute);
 esp_err_t max30102_clear_fifo(max30102_handle_t sensor);
 esp_err_t max30102_read_fifo(max30102_handle_t sensor, uint32_t* red, uint32_t* ir);
 void max30102_heartrate_algo_reset(max30102_handle_t sensor);
 void max30102_spo2_algo_reset(max30102_handle_t sensor);
 bool max30102_heartrate_check_for_beat(max30102_handle_t sensor, int32_t sample);
-void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buffer, int32_t n_ir_buffer_length, uint32_t* pun_red_buffer, int32_t* pn_spo2, int8_t* pch_spo2_valid, int32_t* pn_heart_rate, int8_t* pch_hr_valid);
+void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buffer, int32_t n_ir_buffer_length,
+                                 uint32_t* pun_red_buffer, int32_t* pn_spo2, int8_t* pch_spo2_valid,
+                                 int32_t* pn_heart_rate, int8_t* pch_hr_valid);
 
 #ifdef __cplusplus
 }
