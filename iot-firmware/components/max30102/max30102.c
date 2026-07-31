@@ -14,6 +14,8 @@
 
 #include "max30102.h"
 
+#include "config.h"
+
 #define MAX30102_FIFOWRITEPTR   0x04
 #define MAX30102_FIFOOVERFLOW   0x05
 #define MAX30102_FIFOREADPTR    0x06
@@ -38,12 +40,6 @@
 #define MAX30102_SHUTDOWN   0x80
 #define MAX30102_WAKEUP     0x00
 #define MAX30102_RESET      0x40         
-
-#define FREQS       12.5
-#define BUFFER_SIZE 50
-#define MA4_SIZE    4
-
-#define SPO2_DECIMATION (SAMPLE_RATE_HZ / FREQS)
 
 #ifndef min
 #define min(x, y) ((x) < (y) ? (x) : (y))
@@ -74,8 +70,8 @@ typedef struct {
 typedef struct {
     uint8_t uch_spo2_table[184];
 
-    int32_t an_x[BUFFER_SIZE];
-    int32_t an_y[BUFFER_SIZE];
+    int32_t an_x[CARDIAC_BUFFER_SIZE];
+    int32_t an_y[CARDIAC_BUFFER_SIZE];
 } max30102_spo2_algo_t;
 
 typedef struct {
@@ -84,6 +80,8 @@ typedef struct {
     max30102_spo2_algo_t spo2_algo;
 } max30102_dev_t;
 
+static int s_beat_avg = 0;
+static int32_t s_spo2 = -999;
 
 static inline int32_t mul16(int16_t x, int16_t y) {
     return (int32_t)x * (int32_t)y;
@@ -506,7 +504,7 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
         sens->spo2_algo.an_x[k] = -1 * ((int32_t) (pun_ir_buffer[k] - un_ir_mean));
     }
 
-    for (k = 0; k < BUFFER_SIZE - MA4_SIZE; ++k) {
+    for (k = 0; k < CARDIAC_BUFFER_SIZE - CARDIAC_MA4_SIZE; ++k) {
         sens->spo2_algo.an_x[k] = (sens->spo2_algo.an_x[k] +
                                    sens->spo2_algo.an_x[k + 1] +
                                    sens->spo2_algo.an_x[k + 2] +
@@ -515,11 +513,11 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
 
     n_th1 = 0;
 
-    for (k = 0; k < BUFFER_SIZE; ++k) {
+    for (k = 0; k < CARDIAC_BUFFER_SIZE; ++k) {
         n_th1 += sens->spo2_algo.an_x[k];
     }
 
-    n_th1 = n_th1 / (BUFFER_SIZE);
+    n_th1 = n_th1 / (CARDIAC_BUFFER_SIZE);
 
     if (n_th1 < 30) {
         n_th1 = 30;
@@ -536,7 +534,7 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
     max30102_find_peaks(an_ir_valley_locs,
                         &n_npks,
                         sens->spo2_algo.an_x,
-                        BUFFER_SIZE,
+                        CARDIAC_BUFFER_SIZE,
                         n_th1,
                         4,
                         15);
@@ -548,7 +546,7 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
         }
 
         n_peak_interval_sum = n_peak_interval_sum / (n_npks - 1);
-        *pn_heart_rate = (int32_t) ((FREQS * 60) / n_peak_interval_sum);
+        *pn_heart_rate = (int32_t) ((CARDIAC_FREQS * 60) / n_peak_interval_sum);
         *pch_hr_valid = 1;
     } else {
         *pn_heart_rate = -999;
@@ -570,7 +568,7 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
     }
 
     for (k = 0; k < n_exact_ir_valley_locs_count; ++k) {
-        if (an_ir_valley_locs[k] > BUFFER_SIZE) {
+        if (an_ir_valley_locs[k] > CARDIAC_BUFFER_SIZE) {
             *pn_spo2 = -999;
             *pch_spo2_valid = 0;
             return;
@@ -637,4 +635,20 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
         *pn_spo2 = -999;
         *pch_spo2_valid = 0;
     }
+}
+
+void max30102_set_beat_avg(const int beat_avg) {
+    s_beat_avg = beat_avg;
+}
+
+int max30102_get_beat_avg() {
+    return s_beat_avg;
+}
+
+void max30102_set_spo2(const int32_t spo2) {
+    s_spo2 = spo2;
+}
+
+int32_t max30102_get_spo2() {
+    return s_spo2;
 }

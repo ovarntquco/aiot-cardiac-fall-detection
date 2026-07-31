@@ -1,5 +1,5 @@
-#ifndef MPU6050_BATCH_H
-#define MPU6050_BATCH_H
+#ifndef MPU6050_PAYLOAD_H
+#define MPU6050_PAYLOAD_H
 
 #include <stdint.h>
 
@@ -20,12 +20,12 @@ typedef struct {
     float gyro_x[MOTION_BATCH_SIZE];
     float gyro_y[MOTION_BATCH_SIZE];
     float gyro_z[MOTION_BATCH_SIZE];
-} mpu6050_batch_t;
+} mpu6050_payload_t;
 
-void mpu6050_batch_start(mpu6050_batch_t* batch);
-bool mpu6050_batch_is_full(mpu6050_batch_t* batch);
-void mpu6050_batch_add_sample(mpu6050_batch_t *batch, float ax, float ay, float az,
-                              float gx, float gy, float gz);
+void mpu6050_payload_start(mpu6050_payload_t* payload);
+bool mpu6050_payload_is_full(mpu6050_payload_t* payload);
+void mpu6050_payload_add_sample(mpu6050_payload_t *payload, float ax, float ay, float az,
+                                float gx, float gy, float gz);
 
 #ifdef __cplusplus
 }

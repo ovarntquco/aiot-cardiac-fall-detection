@@ -104,6 +104,10 @@ bool max30102_heartrate_check_for_beat(max30102_handle_t sensor, int32_t sample)
 void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buffer, int32_t n_ir_buffer_length,
                                  uint32_t* pun_red_buffer, int32_t* pn_spo2, int8_t* pch_spo2_valid,
                                  int32_t* pn_heart_rate, int8_t* pch_hr_valid);
+void max30102_set_beat_avg(const int beat_avg);
+int max30102_get_beat_avg();
+void max30102_set_spo2(const int32_t spo2);
+int32_t max30102_get_spo2();
 
 #ifdef __cplusplus
 }
