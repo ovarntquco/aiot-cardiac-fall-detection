@@ -28,3 +28,18 @@ export async function findById(deviceId) {
 
   return data;
 }
+
+export async function findChatIdById(deviceId) {
+  const { data, error } = await supabase
+    .from("devices")
+    .select("patient:accounts(chat_id)")
+    .eq("id", deviceId)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}

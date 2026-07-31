@@ -12,6 +12,8 @@ const requireEnvVars = [
   "MOTION_TOPIC",
   "GPS_TOPIC",
   "EVENT_TOPIC",
+  "BOT_TOKEN",
+  "NGROK_URL",
 ];
 
 const missing = requireEnvVars.filter((key) => !process.env[key]);

@@ -41,21 +41,3 @@ export async function findById(id) {
 
   return data;
 }
-
-export async function findChatIdByDeviceId(deviceId) {
-  const { data, error } = await supabase
-    .from("devices")
-    .select(
-      `id,
-      patient_account_id,
-      users ( chat_id )
-    `)
-    .eq("id", deviceId)
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data.users.chat_id;
-}

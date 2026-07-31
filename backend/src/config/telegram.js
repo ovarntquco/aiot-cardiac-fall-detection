@@ -1,4 +1,4 @@
-import { env } from "./env";
+import { env } from "./env.js";
 
 export async function registerWebhook() {
   const url = `https://api.telegram.org/bot${env.BOT_TOKEN}/setWebhook?url=${env.NGROK_URL}`;

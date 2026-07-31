@@ -1,5 +1,5 @@
-import supabase from "../config/supabase";
-import { env } from "../config/env";
+import supabase from "../config/supabase.js";
+import { env } from "../config/env.js";
 
 export async function create({ eventId, type }) {
   const { data, error } = await supabase
