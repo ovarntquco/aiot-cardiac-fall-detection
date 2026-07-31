@@ -16,5 +16,8 @@
   "devDependencies": {
     "nodemon": "^3.1.14",
     "supabase": "^2.110.0"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true
   }
 }
