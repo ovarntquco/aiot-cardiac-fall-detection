@@ -20,47 +20,37 @@ typedef struct {
     i2c_master_dev_handle_t i2c_dev;
 } mpu6050_dev_t;
 
-static esp_err_t mpu6050_write(
-    mpu6050_handle_t sensor,
-    const uint8_t reg_addr,
-    const uint8_t* const data_buff,
-    size_t data_len
-) {
+static esp_err_t mpu6050_write(mpu6050_handle_t sensor, uint8_t reg_addr,
+                               uint8_t* const data_buf, size_t data_len) {
     mpu6050_dev_t* sens = sensor;
     uint8_t* buffer = malloc(sizeof(*buffer) * (data_len + 1));
-    if (NULL == buffer)
+
+    if (NULL == buffer) {
         return ESP_ERR_NO_MEM;
+    }
 
     buffer[0] = reg_addr;
-    memcpy(&buffer[1], data_buff, data_len);
+    memcpy(&buffer[1], data_buf, data_len);
 
-    esp_err_t ret = i2c_master_transmit(
-        sens->i2c_dev,
-        buffer,
-        data_len + 1,
-        -1
-    );
+    esp_err_t ret = i2c_master_transmit(sens->i2c_dev,
+                                        buffer,
+                                        data_len + 1,
+                                        -1);
 
     free(buffer);
     return ret;
 }
 
-static esp_err_t mpu6050_read(
-    mpu6050_handle_t sensor,
-    const uint8_t reg_addr,
-    uint8_t* const data_buff,
-    size_t data_len
-) {
+static esp_err_t mpu6050_read(mpu6050_handle_t sensor, uint8_t reg_addr,
+                              uint8_t* const data_buf, size_t data_len) {
     mpu6050_dev_t* sens = sensor;
 
-    return i2c_master_transmit_receive(
-        sens->i2c_dev, 
-        &reg_addr,
-        1, 
-        data_buff,
-        data_len,
-        -1
-    );
+    return i2c_master_transmit_receive(sens->i2c_dev,
+                                       &reg_addr,
+                                       1,
+                                       data_buf,
+                                       data_len,
+                                       -1);
 }
 
 mpu6050_handle_t mpu6050_create(i2c_master_dev_handle_t dev) {
@@ -84,6 +74,7 @@ esp_err_t mpu6050_wakeup(mpu6050_handle_t sensor) {
     uint8_t tmp;
 
     ret = mpu6050_read(sensor, MPU6050_PWR_MGMT_1, &tmp, 1);
+    
     if (ESP_OK != ret) {
         return ret;
     }
@@ -98,6 +89,7 @@ esp_err_t mpu6050_shutdown(mpu6050_handle_t sensor) {
     uint8_t tmp;
 
     ret = mpu6050_read(sensor, MPU6050_PWR_MGMT_1, &tmp, 1);
+    
     if (ESP_OK != ret) {
         return ret;
     }
@@ -119,22 +111,24 @@ esp_err_t mpu6050_get_acce_sensitivity(mpu6050_handle_t sensor, float *const acc
     ret = mpu6050_read(sensor, MPU6050_ACCEL_CONFIG, &acce_fs, 1);
 
     acce_fs = (acce_fs >> 3) & 0x03;
+
     switch (acce_fs) {
-    case ACCE_FS_2G:
-        *acce_sensitivity = 16384;
-        break;
-    case ACCE_FS_4G:
-        *acce_sensitivity = 8192;
-        break;
-    case ACCE_FS_8G:
-        *acce_sensitivity = 4096;
-        break;
-    case ACCE_FS_16G:
-        *acce_sensitivity = 2048;
-        break;
-    default:
-        break;
+        case ACCE_FS_2G:
+            *acce_sensitivity = 16384;
+            break;
+        case ACCE_FS_4G:
+            *acce_sensitivity = 8192;
+            break;
+        case ACCE_FS_8G:
+            *acce_sensitivity = 4096;
+            break;
+        case ACCE_FS_16G:
+            *acce_sensitivity = 2048;
+            break;
+        default:
+            break;
     }
+
     return ret;
 }
 
@@ -146,21 +140,22 @@ esp_err_t mpu6050_get_gyro_sensitivity(mpu6050_handle_t sensor, float* const gyr
 
     gyro_fs = (gyro_fs >> 3) & 0x03;
     switch (gyro_fs) {
-    case GYRO_FS_250DPS:
-        *gyro_sensitivity = 131;
-        break;
-    case GYRO_FS_500DPS:
-        *gyro_sensitivity = 65.5;
-        break;
-    case GYRO_FS_1000DPS:
-        *gyro_sensitivity = 32.8;
-        break;
-    case GYRO_FS_2000DPS:
-        *gyro_sensitivity = 16.4;
-        break;
-    default:
-        break;
+        case GYRO_FS_250DPS:
+            *gyro_sensitivity = 131;
+            break;
+        case GYRO_FS_500DPS:
+            *gyro_sensitivity = 65.5;
+            break;
+        case GYRO_FS_1000DPS:
+            *gyro_sensitivity = 32.8;
+            break;
+        case GYRO_FS_2000DPS:
+            *gyro_sensitivity = 16.4;
+            break;
+        default:
+            break;
     }
+
     return ret;
 }
 
@@ -190,10 +185,13 @@ esp_err_t mpu6050_get_acce(mpu6050_handle_t sensor, mpu6050_acce_value_t* const 
     mpu6050_raw_acce_value_t raw_acce;
 
     ret = mpu6050_get_acce_sensitivity(sensor, &acce_sensitivity);
+    
     if (ESP_OK != ret) {
         return ret;
     }
+    
     ret = mpu6050_get_raw_acce(sensor, &raw_acce);
+    
     if (ESP_OK != ret) {
         return ret;
     }
@@ -210,10 +208,13 @@ esp_err_t mpu6050_get_gyro(mpu6050_handle_t sensor, mpu6050_gyro_value_t* const 
     mpu6050_raw_gyro_value_t raw_gyro;
 
     ret = mpu6050_get_gyro_sensitivity(sensor, &gyro_sensitivity);
+    
     if (ESP_OK != ret) {
         return ret;
     }
+    
     ret = mpu6050_get_raw_gyro(sensor, &raw_gyro);
+    
     if (ESP_OK != ret) {
         return ret;
     }

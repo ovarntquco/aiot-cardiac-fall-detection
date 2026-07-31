@@ -39,6 +39,12 @@
 #define MAX30102_WAKEUP     0x00
 #define MAX30102_RESET      0x40         
 
+#define FREQS       12.5
+#define BUFFER_SIZE 50
+#define MA4_SIZE    4
+
+#define SPO2_DECIMATION (SAMPLE_RATE_HZ / FREQS)
+
 #ifndef min
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #endif
@@ -83,62 +89,50 @@ static inline int32_t mul16(int16_t x, int16_t y) {
     return (int32_t)x * (int32_t)y;
 }
 
-static esp_err_t max30102_write(
-    max30102_handle_t sensor,
-    uint8_t reg_addr,
-    uint8_t* const data_buff,
-    size_t data_len
-) {
+static esp_err_t max30102_write(max30102_handle_t sensor, uint8_t reg_addr,
+                                uint8_t* const data_buf, size_t data_len) {
     max30102_dev_t* sens = sensor;
 
     uint8_t* buffer = malloc(sizeof(*buffer) * (data_len + 1));
-    if (NULL == buffer)
+
+    if (NULL == buffer) {
         return ESP_ERR_NO_MEM;
+    }
 
     buffer[0] = reg_addr;
-    memcpy(&buffer[1], data_buff, data_len);
+    memcpy(&buffer[1], data_buf, data_len);
 
-    esp_err_t ret = i2c_master_transmit(
-        sens->dev,
-        buffer,
-        data_len + 1,
-        -1
-    );
+    esp_err_t ret = i2c_master_transmit(sens->dev,
+                                        buffer,
+                                        data_len + 1,
+                                        -1);
 
     free(buffer);
     return ret;
 }
 
-static esp_err_t max30102_read(
-    max30102_handle_t sensor,
-    uint8_t reg_addr,
-    uint8_t* const data_buff,
-    size_t data_len
-) {
+static esp_err_t max30102_read(max30102_handle_t sensor, uint8_t reg_addr,
+                               uint8_t* const data_buf, size_t data_len) {
     max30102_dev_t* sens = sensor;
 
-    return i2c_master_transmit_receive(
-        sens->dev,
-        &reg_addr,
-        1,
-        data_buff,
-        data_len,
-        -1
-    );
+    return i2c_master_transmit_receive(sens->dev,
+                                       &reg_addr,
+                                       1,
+                                       data_buf,
+                                       data_len,
+                                       -1);
 }
 
-static esp_err_t max30102_bitmask(
-    max30102_handle_t sensor,
-    uint8_t reg_addr,
-    uint8_t mask,
-    uint8_t thing
-) {
+static esp_err_t max30102_bitmask(max30102_handle_t sensor, uint8_t reg_addr,
+                                  uint8_t mask, uint8_t thing) {
     uint8_t original_contents;
     esp_err_t ret;
 
     ret = max30102_read(sensor, reg_addr, &original_contents, 1);
-    if (ESP_OK != ret)
+
+    if (ESP_OK != ret) {
         return ret;
+    }
 
     original_contents &= mask;
     original_contents |= thing;
@@ -156,8 +150,10 @@ static esp_err_t max30102_soft_reset(max30102_handle_t sensor) {
     while ((esp_timer_get_time() - start_time_us) < 100000) {
         uint8_t response;
         ret = max30102_read(sensor, MAX30102_MODECONFIG, &response, 1);
-        if (ESP_OK == ret && 0 == (response & MAX30102_RESET))
+
+        if (ESP_OK == ret && 0 == (response & MAX30102_RESET)) {
             return ESP_OK;
+        }
 
         vTaskDelay(pdMS_TO_TICKS(1));
     }
@@ -170,18 +166,15 @@ static int16_t max30102_avg_dc_estimator(int32_t* p, uint16_t x) {
     return (int16_t)(*p >> 15);
 }
 
-static int16_t max30102_low_pass_fir_filter(
-    int16_t* cbuf,
-    uint8_t* offset,
-    uint16_t* fir_coeffs,
-    int16_t din
-) {
+static int16_t max30102_low_pass_fir_filter(int16_t* cbuf, uint8_t* offset,
+                                            uint16_t* fir_coeffs, int16_t din) {
     cbuf[*offset] = din;
 
     int32_t z = mul16(fir_coeffs[11], cbuf[(*offset - 11) & 0x1F]);
 
-    for (uint8_t i = 0; i < 11; i++)
+    for (uint8_t i = 0; i < 11; i++) {
         z += mul16(fir_coeffs[i], cbuf[(*offset - i) & 0x1F] + cbuf[(*offset - 22 + i) & 0x1F]);
+    }
 
     (*offset)++;
     (*offset) %= 32;
@@ -189,21 +182,18 @@ static int16_t max30102_low_pass_fir_filter(
     return (int16_t) (z >> 15);
 }
 
-static void max30102_peaks_above_min_height(
-    int32_t* pn_locs,
-    int32_t* n_npks,
-    int32_t* pn_x,
-    int32_t n_size,
-    int32_t n_min_height
-) {
+static void max30102_peaks_above_min_height(int32_t* pn_locs, int32_t* n_npks, int32_t* pn_x,
+                                            int32_t n_size, int32_t n_min_height) {
     int32_t i = 1, n_width;
     *n_npks = 0;
 
     while (i < n_size - 1) {
         if (pn_x[i] > n_min_height && pn_x[i] > pn_x[i - 1]) {
             n_width = 1;
-            while (i + n_width < n_size && pn_x[i] == pn_x[i + n_width])
+
+            while (i + n_width < n_size && pn_x[i] == pn_x[i + n_width]) {
                 ++n_width;
+            }
 
             if (pn_x[i] > pn_x[i + n_width] && (*n_npks) < 15) {
                 pn_locs[(*n_npks)++] = i;
@@ -219,11 +209,13 @@ static void max30102_peaks_above_min_height(
 
 static void max30102_sort_ascend(int32_t* pn_x, int32_t n_size) {
     int32_t i, j, n_temp;
+
     for (i = 1; i < n_size; ++i) {
         n_temp = pn_x[i];
 
-        for (j = i; j > 0 && n_temp < pn_x[j - 1]; --j)
+        for (j = i; j > 0 && n_temp < pn_x[j - 1]; --j) {
             pn_x[j] = pn_x[j - 1];
+        }
 
         pn_x[j] = n_temp;
     }
@@ -231,17 +223,20 @@ static void max30102_sort_ascend(int32_t* pn_x, int32_t n_size) {
 
 static void max30102_sort_indices_descend(int32_t* pn_x, int32_t* pn_indx, int32_t n_size) {
     int32_t i, j, n_temp;
+
     for (i = 1; i < n_size; ++i) {
         n_temp = pn_indx[i];
 
-        for (j = i; j > 0 && pn_x[n_temp] > pn_x[pn_indx[j - 1]]; --j)
+        for (j = i; j > 0 && pn_x[n_temp] > pn_x[pn_indx[j - 1]]; --j) {
             pn_indx[j] = pn_indx[j - 1];
+        }
 
         pn_indx[j] = n_temp;
     }
 }
 
-static void max30102_remove_close_peaks(int32_t* pn_locs, int32_t* pn_npks, int32_t* pn_x, int32_t n_min_distance) {
+static void max30102_remove_close_peaks(int32_t* pn_locs, int32_t* pn_npks,
+                                        int32_t* pn_x, int32_t n_min_distance) {
     int32_t i, j, n_old_npks, n_dist;
 
     max30102_sort_indices_descend(pn_x, pn_locs, *pn_npks);
@@ -251,15 +246,18 @@ static void max30102_remove_close_peaks(int32_t* pn_locs, int32_t* pn_npks, int3
         *pn_npks = i + 1;
         for (j = i + 1; j < n_old_npks; j++) {
             n_dist = pn_locs[j] - (i == -1 ? -1 : pn_locs[i]);
-            if (n_dist > n_min_distance || n_dist < -n_min_distance)
+
+            if (n_dist > n_min_distance || n_dist < -n_min_distance) {
                 pn_locs[(*pn_npks)++] = pn_locs[j];
+            }
         }
     }
 
     max30102_sort_ascend(pn_locs, *pn_npks);
 }
 
-static void max30102_find_peaks(int32_t* pn_locs, int32_t* n_npks, int32_t* pn_x, int32_t n_size, int32_t n_min_height, int32_t n_min_distance, int32_t n_max_num) {
+static void max30102_find_peaks(int32_t* pn_locs, int32_t* n_npks, int32_t* pn_x,
+                                int32_t n_size, int32_t n_min_height, int32_t n_min_distance, int32_t n_max_num) {
     max30102_peaks_above_min_height(pn_locs, n_npks, pn_x, n_size, n_min_height);
     max30102_remove_close_peaks(pn_locs, n_npks, pn_x, n_min_distance);
     *n_npks = min(*n_npks, n_max_num);
@@ -270,12 +268,16 @@ esp_err_t max30102_clear_fifo(max30102_handle_t sensor) {
     uint8_t zero = 0;
 
     ret = max30102_write(sensor, MAX30102_FIFOWRITEPTR, &zero, 1);
-    if (ESP_OK != ret) 
+    
+    if (ESP_OK != ret) {
         return ret;
+    }
 
     ret = max30102_write(sensor, MAX30102_FIFOOVERFLOW, &zero, 1);
-    if (ESP_OK != ret)
+    
+    if (ESP_OK != ret) {
         return ret;
+    }
 
     return max30102_write(sensor, MAX30102_FIFOREADPTR, &zero, 1);
 }
@@ -283,8 +285,10 @@ esp_err_t max30102_clear_fifo(max30102_handle_t sensor) {
 esp_err_t max30102_read_fifo(max30102_handle_t sensor, uint32_t* red, uint32_t* ir) {
     uint8_t buf[6];
     esp_err_t ret = max30102_read(sensor, MAX30102_FIFODATA, buf, 6);
-    if (ESP_OK != ret)
+
+    if (ESP_OK != ret) {
         return ret;
+    }
 
     *red = (((uint32_t)buf[0] << 16) | ((uint32_t)buf[1] << 8) | buf[2]) & 0x03FFFF;
     *ir = (((uint32_t)buf[3] << 16) | ((uint32_t)buf[4] << 8) | buf[5]) & 0x03FFFF;
@@ -332,8 +336,10 @@ void max30102_spo2_algo_reset(max30102_handle_t sensor) {
 
 max30102_handle_t max30102_create(i2c_master_dev_handle_t dev) {
     max30102_dev_t* sensor = calloc(1, sizeof(max30102_dev_t));
-    if (NULL == sensor)
+    
+    if (NULL == sensor) {
         return NULL;
+    }
 
     sensor->dev = dev;
     return (max30102_handle_t) sensor;
@@ -352,54 +358,71 @@ esp_err_t max30102_shutdown(max30102_handle_t sensor) {
     return max30102_bitmask(sensor, MAX30102_MODECONFIG, MAX30102_SHUTDOWN_MASK, MAX30102_SHUTDOWN);
 }
 
-esp_err_t max30102_config(
-    max30102_handle_t sensor,
-    max30102_mode_t mode,
-    max30102_smp_avg_t sample_average,
-    uint8_t rollover_en,
-    max30102_fifo_a_full_t fifo_a_full,
-    max30102_adc_rng_t adc_range,
-    max30102_smp_rate_t sample_rate,
-    max30102_led_pw_t pulse_width,
-    max30102_led_pa_t pulse_amplitute
-) {
+esp_err_t max30102_config(max30102_handle_t sensor, max30102_mode_t mode, max30102_smp_avg_t sample_average,
+                          uint8_t rollover_en, max30102_fifo_a_full_t fifo_a_full, max30102_adc_rng_t adc_range,
+                          max30102_smp_rate_t sample_rate, max30102_led_pw_t pulse_width, max30102_led_pa_t pulse_amplitute) {
     esp_err_t ret;
     
     ret = max30102_soft_reset(sensor);
-    if (ESP_OK != ret)
+
+    if (ESP_OK != ret) {
         return ret;
+    }
     
     ret = max30102_bitmask(sensor, MAX30102_MODECONFIG, MAX30102_MODE_MASK, mode);
-    if (ESP_OK != ret)
+    
+    if (ESP_OK != ret) {
         return ret;
+    }
 
     ret = max30102_bitmask(sensor, MAX30102_FIFOCONFIG, MAX30102_SAMPLEAVG_MASK, sample_average);
-    if (ESP_OK != ret)
+    
+    if (ESP_OK != ret) {
         return ret;
+    }
+
     ret = max30102_bitmask(sensor, MAX30102_FIFOCONFIG, MAX30102_ROLLOVER_MASK, rollover_en << 4);
-    if (ESP_OK != ret)
+    
+    if (ESP_OK != ret) {
         return ret;
+    }
+
     ret = max30102_bitmask(sensor, MAX30102_FIFOCONFIG, MAX30102_FIFO_A_FULL_MASK, fifo_a_full);
-    if (ESP_OK != ret)
+    
+    if (ESP_OK != ret) {
         return ret;
+    }
 
     ret = max30102_bitmask(sensor, MAX30102_SPO2CONFIG, MAX30102_ADCRANGE_MASK, adc_range);
-    if (ESP_OK != ret)
+    
+    if (ESP_OK != ret) {
         return ret;
+    }
+    
     ret = max30102_bitmask(sensor, MAX30102_SPO2CONFIG, MAX30102_SAMPLERATE_MASK, sample_rate);
-    if (ESP_OK != ret)
+    
+    if (ESP_OK != ret) {
         return ret;
+    }
+
     ret = max30102_bitmask(sensor, MAX30102_SPO2CONFIG, MAX30102_PULSEWIDTH_MASK, pulse_width);
-    if (ESP_OK != ret)
+    
+    if (ESP_OK != ret) {
         return ret;
+    }
 
     uint8_t pa =(uint8_t) pulse_amplitute;
     ret = max30102_write(sensor, MAX30102_LED1_PULSEAMP, &pa, 1);
-    if (ESP_OK != ret)
+
+    if (ESP_OK != ret) {
         return ret;
+    }
+
     ret = max30102_write(sensor, MAX30102_LED2_PULSEAMP, &pa, 1);
-    if (ESP_OK != ret)
+
+    if (ESP_OK != ret) {
         return ret;
+    }
 
     return max30102_clear_fifo(sensor);
 }
@@ -419,10 +442,8 @@ bool max30102_heartrate_check_for_beat(max30102_handle_t sensor, int32_t sample)
         (int16_t)(sample - sens->hr_algo.ir_avg_estimated)
     );
 
-    if (
-        (sens->hr_algo.ir_ac_signal_prev < 0)
-        && (sens->hr_algo.ir_ac_signal_curr >= 0)
-    ) {
+    if ((sens->hr_algo.ir_ac_signal_prev < 0) && 
+        (sens->hr_algo.ir_ac_signal_curr >= 0)) {
         sens->hr_algo.ir_ac_max = sens->hr_algo.ir_ac_signal_max;
         sens->hr_algo.ir_ac_min = sens->hr_algo.ir_ac_signal_min;
 
@@ -430,33 +451,28 @@ bool max30102_heartrate_check_for_beat(max30102_handle_t sensor, int32_t sample)
         sens->hr_algo.negative_edge = 0;
         sens->hr_algo.ir_ac_signal_max = 0;
 
-        if (
-            (sens->hr_algo.ir_ac_max - sens->hr_algo.ir_ac_min) > 20
-            && (sens->hr_algo.ir_ac_max - sens->hr_algo.ir_ac_min) < 1000
-        ) 
+        if ((sens->hr_algo.ir_ac_max - sens->hr_algo.ir_ac_min) > 20 &&
+            (sens->hr_algo.ir_ac_max - sens->hr_algo.ir_ac_min) < 1000) { 
             beat_detected = true;
+        }
     }
 
-    if (
-        (sens->hr_algo.ir_ac_signal_prev > 0)
-        && (sens->hr_algo.ir_ac_signal_curr <= 0)
-    ) {
+    if ((sens->hr_algo.ir_ac_signal_prev > 0) &&
+        (sens->hr_algo.ir_ac_signal_curr <= 0)) {
         sens->hr_algo.positive_edge = 0;
         sens->hr_algo.negative_edge = 1;
         sens->hr_algo.ir_ac_signal_min = 0;
     }
 
-    if (
-        sens->hr_algo.positive_edge 
-        && (sens->hr_algo.ir_ac_signal_curr > sens->hr_algo.ir_ac_signal_prev)
-    )
+    if (sens->hr_algo.positive_edge &&
+        (sens->hr_algo.ir_ac_signal_curr > sens->hr_algo.ir_ac_signal_prev)) {
         sens->hr_algo.ir_ac_signal_max = sens->hr_algo.ir_ac_signal_curr;
+    }
 
-    if (
-        sens->hr_algo.negative_edge
-        && (sens->hr_algo.ir_ac_signal_curr < sens->hr_algo.ir_ac_signal_prev)
-    ) 
+    if (sens->hr_algo.negative_edge &&
+        (sens->hr_algo.ir_ac_signal_curr < sens->hr_algo.ir_ac_signal_prev)) { 
         sens->hr_algo.ir_ac_signal_min = sens->hr_algo.ir_ac_signal_curr;
+    }
 
     return beat_detected;
 }
@@ -479,50 +495,57 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
     int32_t n_nume, n_denom;
 
     un_ir_mean = 0;
-    for (k = 0; k < n_ir_buffer_length; ++k)
+
+    for (k = 0; k < n_ir_buffer_length; ++k) {
         un_ir_mean += pun_ir_buffer[k];
+    }
+
     un_ir_mean = un_ir_mean / n_ir_buffer_length;
 
-    for (k = 0; k < n_ir_buffer_length; ++k)
+    for (k = 0; k < n_ir_buffer_length; ++k) {
         sens->spo2_algo.an_x[k] = -1 * ((int32_t) (pun_ir_buffer[k] - un_ir_mean));
+    }
 
-    for (k = 0; k < BUFFER_SIZE - MA4_SIZE; ++k)
-        sens->spo2_algo.an_x[k] = (
-            sens->spo2_algo.an_x[k]
-            + sens->spo2_algo.an_x[k + 1]
-            + sens->spo2_algo.an_x[k + 2]
-            + sens->spo2_algo.an_x[k + 3]
-        ) / (int)4;
+    for (k = 0; k < BUFFER_SIZE - MA4_SIZE; ++k) {
+        sens->spo2_algo.an_x[k] = (sens->spo2_algo.an_x[k] +
+                                   sens->spo2_algo.an_x[k + 1] +
+                                   sens->spo2_algo.an_x[k + 2] +
+                                   sens->spo2_algo.an_x[k + 3]) / (int)4;
+    }
 
     n_th1 = 0;
-    for (k = 0; k < BUFFER_SIZE; ++k)
+
+    for (k = 0; k < BUFFER_SIZE; ++k) {
         n_th1 += sens->spo2_algo.an_x[k];
+    }
 
     n_th1 = n_th1 / (BUFFER_SIZE);
 
-    if (n_th1 < 30)
+    if (n_th1 < 30) {
         n_th1 = 30;
+    }
 
-    if (n_th1 > 60)
+    if (n_th1 > 60) {
         n_th1 = 60;
+    }
 
-    for (k = 0; k < 15; ++k)
+    for (k = 0; k < 15; ++k) {
         an_ir_valley_locs[k] = 0;
+    }
 
-    max30102_find_peaks(
-        an_ir_valley_locs,
-        &n_npks,
-        sens->spo2_algo.an_x,
-        BUFFER_SIZE,
-        n_th1,
-        4,
-        15
-    );
+    max30102_find_peaks(an_ir_valley_locs,
+                        &n_npks,
+                        sens->spo2_algo.an_x,
+                        BUFFER_SIZE,
+                        n_th1,
+                        4,
+                        15);
 
     n_peak_interval_sum = 0;
     if (n_npks >= 2) {
-        for (k = 1; k < n_npks; ++k)
+        for (k = 1; k < n_npks; ++k) {
             n_peak_interval_sum += (an_ir_valley_locs[k] - an_ir_valley_locs[k - 1]);
+        }
 
         n_peak_interval_sum = n_peak_interval_sum / (n_npks - 1);
         *pn_heart_rate = (int32_t) ((FREQS * 60) / n_peak_interval_sum);
@@ -541,8 +564,10 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
 
     n_ratio_average = 0;
     n_i_ratio_count = 0;
-    for (k = 0; k < 5; ++k)
+
+    for (k = 0; k < 5; ++k) {
         an_ratio[k] = 0;
+    }
 
     for (k = 0; k < n_exact_ir_valley_locs_count; ++k) {
         if (an_ir_valley_locs[k] > BUFFER_SIZE) {
@@ -555,6 +580,7 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
     for (k = 0; k < n_exact_ir_valley_locs_count - 1; ++k) {
         n_y_dc_max = -16777216;
         n_x_dc_max = -16777216;
+
         if (an_ir_valley_locs[k + 1] - an_ir_valley_locs[k] > 3) {
             for (i = an_ir_valley_locs[k]; i < an_ir_valley_locs[k + 1]; ++i) {
                 if (sens->spo2_algo.an_x[i] > n_x_dc_max) {
@@ -568,22 +594,20 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
                 }
             }
 
-            n_y_ac = (
-                sens->spo2_algo.an_y[an_ir_valley_locs[k + 1]] 
-                - sens->spo2_algo.an_y[an_ir_valley_locs[k]]
-            ) * (n_y_dc_max_idx - an_ir_valley_locs[k]);
-            n_y_ac = sens->spo2_algo.an_y[an_ir_valley_locs[k]]
-                     + n_y_ac
-                     / (an_ir_valley_locs[k + 1] - an_ir_valley_locs[k]);
+            n_y_ac = (sens->spo2_algo.an_y[an_ir_valley_locs[k + 1]] -
+                     sens->spo2_algo.an_y[an_ir_valley_locs[k]]) * 
+                     (n_y_dc_max_idx - an_ir_valley_locs[k]);
+            n_y_ac = sens->spo2_algo.an_y[an_ir_valley_locs[k]] +
+                     n_y_ac /
+                     (an_ir_valley_locs[k + 1] - an_ir_valley_locs[k]);
             n_y_ac = sens->spo2_algo.an_y[n_y_dc_max_idx] - n_y_ac;
 
-            n_x_ac = (
-                sens->spo2_algo.an_x[an_ir_valley_locs[k + 1]] 
-                - sens->spo2_algo.an_x[an_ir_valley_locs[k]]
-            ) * (n_x_dc_max_idx - an_ir_valley_locs[k]);
-            n_x_ac = sens->spo2_algo.an_x[an_ir_valley_locs[k]]
-                     + n_x_ac
-                     / (an_ir_valley_locs[k + 1] - an_ir_valley_locs[k]);
+            n_x_ac = (sens->spo2_algo.an_x[an_ir_valley_locs[k + 1]] -
+                     sens->spo2_algo.an_x[an_ir_valley_locs[k]]) *
+                     (n_x_dc_max_idx - an_ir_valley_locs[k]);
+            n_x_ac = sens->spo2_algo.an_x[an_ir_valley_locs[k]] +
+                     n_x_ac /
+                     (an_ir_valley_locs[k + 1] - an_ir_valley_locs[k]);
             n_x_ac = sens->spo2_algo.an_x[n_y_dc_max_idx] - n_x_ac;
 
             n_nume = (n_y_ac * n_x_dc_max) >> 7;
@@ -599,10 +623,11 @@ void max30102_heartrate_and_spo2(max30102_handle_t sensor, uint32_t* pun_ir_buff
     max30102_sort_ascend(an_ratio, n_i_ratio_count);
     n_middle_idx = n_i_ratio_count / 2;
 
-    if (n_middle_idx > 1)
+    if (n_middle_idx > 1) {
         n_ratio_average = (an_ratio[n_middle_idx - 1] + an_ratio[n_middle_idx]) / 2;
-    else
+    } else {
         n_ratio_average = an_ratio[n_middle_idx];
+    }
 
     if (n_ratio_average > 2 && n_ratio_average < 184) {
         n_spo2_calc = sens->spo2_algo.uch_spo2_table[n_ratio_average];

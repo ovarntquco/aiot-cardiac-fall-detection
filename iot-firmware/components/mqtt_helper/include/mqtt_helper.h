@@ -9,9 +9,10 @@
 extern "C" {
 #endif
 
-static const char* MQTT_TAG = "MQTT";
-
-esp_err_t mqtt_init(esp_mqtt_client_handle_t* mqtt_client);
+esp_err_t mqtt_init();
+bool mqtt_is_connected();
+esp_mqtt_client_handle_t mqtt_get_client();
+bool mqtt_publish_topic(char* payload, const char* tag, const char* topic);
 
 #ifdef __cpluscplus
 }
