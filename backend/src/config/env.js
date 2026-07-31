@@ -39,4 +39,6 @@ export const env = {
     GPS: process.env.GPS_TOPIC,
     EVENT: process.env.EVENT_TOPIC,
   },
+  BOT_TOKEN: process.env.BOT_TOKEN,
+  NGROK_URL: process.env.NGROK_URL
 };
