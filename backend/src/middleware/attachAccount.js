@@ -3,6 +3,11 @@ import * as Account from "../models/account.model.js";
 export default async function attachAccount(req, res, next) {
   try {
     const userId = req.user.id;
+    
+    if (!userId) {
+      return res.status(400).json({ message: "Missing required field: user.id" });
+    }
+    
     const account = await Account.findByUserId(userId);
 
     if (!account) {

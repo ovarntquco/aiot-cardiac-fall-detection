@@ -8,30 +8,13 @@ export async function createAccount(req, res, next) {
     const userId = req.user.id;
 
     if (!userId) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Missing required field: user.id" });
     }
 
     const { fullName, dateOfBirth, sex, height, weight } = req.body;
-    const account = await Account.create({
-      userId,
-      fullName,
-      dateOfBirth,
-      sex,
-      height,
-      weight,
-    });
+    const account = await Account.create({ userId, fullName, dateOfBirth, sex, height, weight, });
 
-    res.status(201).json({
-      message: "Account created successfully",
-      account: {
-        id: account.id,
-        fullName: account.full_name,
-        dateOfBirth: account.date_of_birth,
-        sex: account.sex,
-        height: account.height,
-        weight: account.weight,
-      },
-    });
+    res.status(201).json({ message: "Account created successfully", account });
   } catch (err) {
     next(err);
   }
@@ -39,13 +22,13 @@ export async function createAccount(req, res, next) {
 
 export async function getMyAccount(req, res, next) {
   try {
-    const accountId = req.user.accountId;
+    const id = req.user.accountId;
 
-    if (!accountId) {
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (!id) {
+      return res.status(400).json({ message: "Missing required field: user.accountId" });
     }
 
-    const account = await Account.findById(accountId);
+    const account = await Account.findById({ id });
 
     if (!account) {
       return res.status(404).json({ message: "Account not found" });
@@ -62,18 +45,16 @@ export async function getAllPatientAccounts(req, res, next) {
     const caregiverAccountId = req.user.accountId;
 
     if (!caregiverAccountId) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Missing required field: user.accountId" });
     }
 
-    const caregiver = await Account.findById(caregiverAccountId);
+    const caregiver = await Account.findById({ id: caregiverAccountId, roleRequired: true });
 
     if (!caregiver) {
       return res.status(404).json({ message: "Account not found" });
     }
     if (caregiver.user.role !== "caregiver") {
-      return res
-        .status(403)
-        .json({ message: "Only caregiver can see their patients" });
+      return res.status(403).json({ message: "Only caregiver can see their patients" });
     }
 
     const patients = await Account.findByCaregiverAccountId(caregiverAccountId);
@@ -86,29 +67,29 @@ export async function getAllPatientAccounts(req, res, next) {
 
 export async function assignCaregiver(req, res, next) {
   try {
+    const accountId = req.user.accountId;
+
+    if (!accountId) {
+      return res.status(400).json({ message: "Missing required field: user.accountId" });
+    }
+
+    const role = req.user.role;
+
+    if (!role) {
+      return res.status(400).json({ message: "Missing required field: user.role" });
+    }
+    if (role !== "patient") {
+      return res.status(403).json({ message: "Only patient can assign a caregiver" });
+    }
+
     const { caregiverAccountId } = req.body;
-
-    if (!caregiverAccountId) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const userId = req.user.id;
-
-    if (req.user.role !== "patient") {
-      return res
-        .status(403)
-        .json({ message: "Only patient can assign a caregiver" });
-    }
-
-    const caregiver = await Account.findById(caregiverAccountId);
+    const caregiver = await Account.findById({ id: caregiverAccountId });
 
     if (!caregiver) {
       return res.status(404).json({ message: "Account not found" });
     }
     if (caregiver.user.role !== "caregiver") {
-      return res
-        .status(403)
-        .json({ message: "Selected account is not a caregiver" });
+      return res.status(403).json({ message: "Selected account is not a caregiver" });
     }
 
     const updated = await Account.assignCaregiver({
@@ -116,10 +97,7 @@ export async function assignCaregiver(req, res, next) {
       caregiverAccountId,
     });
 
-    res.json({
-      message: "Caregiver updated",
-      caregiverAccount: updated.caregiver_account_id,
-    });
+    res.json({ message: "Caregiver updated", caregiverAccount: updated.caregiver_account_id });
   } catch (err) {
     next(err);
   }
@@ -130,9 +108,7 @@ export async function updateVitalsThresholds(req, res, next) {
     const { patientAccountId } = req.params;
 
     if (!patientAccountId) {
-      return res
-        .status(400)
-        .json({ message: "Missing required parameter: patientAccountId" });
+      return res.status(400).json({ message: "Missing required parameter: patientAccountId" });
     }
 
     const updates = {};
@@ -144,20 +120,16 @@ export async function updateVitalsThresholds(req, res, next) {
     }
 
     if (Object.keys(updates).length === 0) {
-      return res
-        .status(400)
-        .json({ message: "No valid fields provided to update" });
+      return res.status(400).json({ message: "No valid fields provided to update" });
     }
 
-    const patient = await Account.findById(patientAccountId);
+    const patient = await Account.findById({ id: patientAccountId });
 
     if (!patient) {
       return res.status(404).json({ message: "Patient account not found" });
     }
     if (patient.caregiver_account_id !== req.user.accountId) {
-      return res
-        .status(403)
-        .json({ message: "Only patient's caregiver can assign information" });
+      return res.status(403).json({ message: "Only patient's caregiver can assign information" });
     }
 
     const updated = await Account.updateVitalsThresholds({
@@ -186,10 +158,10 @@ export async function updateChatId(req, res, next) {
     const accountId = req.user.accountId;
 
     if (!accountId) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Missing required field: user.accountId" });
     }
 
-    const account = await Account.findById(accountId);
+    const account = await Account.findById({ id: accountId });
 
     if (!account) {
       return res.status(404).json({ message: "Account not found" });

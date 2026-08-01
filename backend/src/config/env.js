@@ -33,6 +33,7 @@ export const env = {
   PORT: process.env.PORT || 8080,
   NODE_ENV: process.env.NODE_ENV || "development",
   MQTT_BROKER_URL: process.env.MQTT_BROKER_URL,
+  MQTT_PORT: process.env.MQTT_PORT || 8883,
   MQTT_USERNAME: process.env.MQTT_USERNAME,
   MQTT_PASSWORD: process.env.MQTT_PASSWORD,
   MQTT_TOPICS: {

@@ -13,7 +13,7 @@ const handlers = new Map();
 const client = mqtt.connect(env.MQTT_BROKER_URL, config);
 
 client.on("connect", () => {
-  console.log(`Connected to MQTT broker at ${config.port}`);
+  console.log(`Connected to MQTT broker at ${env.MQTT_PORT}`);
 
   let topics = Object.values(env.MQTT_TOPICS);
 
