@@ -34,7 +34,6 @@ export async function findChatIdById(deviceId) {
     .from("devices")
     .select("patient:accounts(chat_id)")
     .eq("id", deviceId)
-    .select()
     .maybeSingle();
 
   if (error) {

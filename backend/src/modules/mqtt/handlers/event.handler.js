@@ -12,9 +12,9 @@ export default async function handleEvent(ctx) {
       recordedAt: data.recordedAt,
     });
 
-    const patient = await Device.findChatIdById(device.id);
+    const result = await Device.findChatIdById(device.id);
 
-    await sendTelegram(patient.chat_id);
+    await sendTelegram(result.patient.chat_id);
   } catch (err) {
     console.warn(`[event] Failed to save event:`, err.message);
   }

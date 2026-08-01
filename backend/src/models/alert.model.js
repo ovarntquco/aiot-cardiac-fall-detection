@@ -37,7 +37,7 @@ export async function findById(device_id) {
 
 let config = {
   method: 'POST',
-  header: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json' },
   body: undefined
 };
 
@@ -49,9 +49,13 @@ export async function sendTelegram(chat_id) {
     text: "[SOS] - Alerts gone off"
   });
 
+  console.log(config);
+
   const response = await fetch(url, config)
 
   const data = await response.json();
+
+  console.log(data);
 
   if (!data.ok) {
     throw new Error(`Can't send message to user`);
