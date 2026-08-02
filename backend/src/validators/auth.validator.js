@@ -2,18 +2,39 @@ import { body } from "express-validator";
 
 export const registerValidators = [
   body("email")
+    .trim()
+    .notEmpty()
+    .withMessage("email must not be empty")
     .isEmail()
     .withMessage("Valid email is required")
     .normalizeEmail(),
+
   body("password")
+    .trim()
+    .notEmpty()
+    .withMessage("password must not be empty")
     .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters"),
+    .withMessage("password must be at least 8 characters"),
+
   body("role")
+    .trim()
+    .notEmpty()
+    .withMessage("role must not be empty")
     .isIn(["patient", "caregiver"])
-    .withMessage("Role must be patient or caregiver"),
+    .withMessage("role must be patient or caregiver"),
 ];
 
 export const loginValidators = [
-  body("email").notEmpty().withMessage("Email must not be empty"),
-  body("password").notEmpty().withMessage("Password must not be empty"),
+  body("email")
+    .trim()
+    .notEmpty()
+    .withMessage("email must not be empty")
+    .isEmail()
+    .withMessage("Valid email is required")
+    .normalizeEmail(),
+
+  body("password")
+    .trim()
+    .notEmpty()
+    .withMessage("password must not be empty"),
 ];

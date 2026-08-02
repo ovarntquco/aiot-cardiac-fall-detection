@@ -1,6 +1,6 @@
 import { env } from "./config/env.js";
 import app from "./app.js";
-import { registerWebhook } from "./config/telegram.js";
+import registerWebhook from "./config/telegram.js";
 
 await registerWebhook();
 

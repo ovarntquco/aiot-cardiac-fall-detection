@@ -40,7 +40,7 @@ export async function getMyAccount(req, res, next) {
   }
 }
 
-export async function getAllPatientAccounts(req, res, next) {
+export async function getPatientAccounts(req, res, next) {
   try {
     const caregiverAccountId = req.user.accountId;
 
@@ -172,10 +172,7 @@ export async function updateChatId(req, res, next) {
 
     res.json({
       message: "Patient updated successfully",
-      patient: {
-        accountId: updated.id,
-        chatId: updated.chat_id,
-      },
+      patient: { accountId: updated.id, chatId: updated.chat_id },
     });
   } catch (err) {
     next(err);

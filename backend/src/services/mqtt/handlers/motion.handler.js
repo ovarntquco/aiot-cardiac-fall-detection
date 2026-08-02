@@ -8,6 +8,7 @@ export default async function handleMotion(ctx) {
       deviceId: device.id,
       windowStart: data.windowStart,
       sampleRateHz: data.sampleRateHz,
+      tOffsets: data.tOffsets,
       acceX: data.acceX,
       acceY: data.acceY,
       acceZ: data.acceZ,

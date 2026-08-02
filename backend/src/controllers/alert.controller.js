@@ -1,28 +1,20 @@
 import * as Alert from "../models/alert.model.js"
-import * as Device from "../models/device.model.js"
 
-export async function getAlerts(req, res, next) {
+export default async function getAlertsByAccountId(req, res, next) {
   try {
-    const deviceId = req.body;
+    const accountId = req.user.accountId;
 
-    const exist = await Device.findById(deviceId);
+    if (!accountId) {
+      return res.status(400).json({ message: "Missing required field: user.accountId" });
+    }
+
+    const alerts = await Alert.findAlertsByAccountId(accountId);
     
-    if (!exist) {
-      return res.status(404).json({
-        message: `${deviceId} not found`
-      });
+    if (alerts.length === 0) {
+      return res.status(404).json({ message: `No alerts found for ${accountId}` });
     }
 
-    const results = await Alert.findById(deviceId);
-
-    if (!results) {
-      return res.status(404).json({
-        message: `No record found for ${deviceId}`
-      });
-    }
-
-    res.status(200).json({ results });
-
+    res.json({ alerts });
   } catch (err) {
     next(err)
   }

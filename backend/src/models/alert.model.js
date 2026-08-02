@@ -1,65 +1,40 @@
 import supabase from "../config/supabase.js";
+import runQuery from "../utils/runQuery.js";
 import { env } from "../config/env.js";
 
-export async function create({ eventId, type }) {
-  const { data, error } = await supabase
-    .from("alerts")
-    .insert({ event_id: eventId, type })
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
+export async function create(eventId) {
+  return runQuery(
+    supabase
+      .from("alerts")
+      .insert({ event_id: eventId })
+      .select("*")
+      .single()
+  );
 }
 
-export async function findById(device_id) {
-  const { data, error } = await supabase
-    .from("alerts")
-    .select(`
-      id,
-      event_id,
-      type
-      created_at,
-      events!inner (id, device_id)
-    `)
-    .eq("events.device_id", device_id)
-    .maybeSingle()
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data;
+export async function findById(id) {
+  return runQuery(
+    supabase
+      .from("alerts")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle()
+  );
 }
 
-let config = {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: undefined
-};
-
-export async function sendTelegram(chat_id) {
-  const url = `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`;
-
-  config.body = JSON.stringify({
-    chat_id: chat_id,
-    text: "[SOS] - Alerts gone off"
-  });
-
-  console.log(config);
-
-  const response = await fetch(url, config)
-
-  const data = await response.json();
-
-  console.log(data);
-
-  if (!data.ok) {
-    throw new Error(`Can't send message to user`);
-  }
-
-  return data.result;
+export async function findAlertsByAccountId(accountId) {
+  return runQuery(
+    supabase
+      .from("alerts")
+      .select(`
+        id,
+        event_id,
+        events!inner ( 
+          device_id, 
+          recored_at,
+          devices!inner ( patient_account_id )
+        )
+      `)
+      .eq("events.devices.patient_acount_id", accountId)
+  );
 }

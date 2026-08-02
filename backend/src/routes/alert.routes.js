@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { alertValidator } from "../validators/alert.validator";
-import validate from "../middleware/validate";
-import { getAlerts } from "../controllers/alert.controller";
+import authenticateJWT from "../middleware/authenticateJWT.js";
+import attachAccount from "../middleware/attachAccount.js";
+import getAlertsByAccountId from "../controllers/alert.controller.js";
 
 const router = Router();
 
-router.get("/view", alertValidator, validate, getAlerts);
+router.get("/", authenticateJWT, attachAccount, getAlertsByAccountId);
 
 export default router;

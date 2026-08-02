@@ -10,7 +10,7 @@ import {
 import {
   createAccount,
   getMyAccount,
-  getAllPatientAccounts,
+  getPatientAccounts,
   assignCaregiver,
   updateVitalsThresholds,
 } from "../controllers/account.controller.js";
@@ -20,7 +20,7 @@ const router = Router();
 router.post("/create", authenticateJWT, createAccountValidators, validate, createAccount);
 
 router.get("/", authenticateJWT, attachAccount, getMyAccount);
-router.get("/patients", authenticateJWT, attachAccount, getAllPatientAccounts);
+router.get("/patients", authenticateJWT, attachAccount, getPatientAccounts);
 
 router.patch("/caregiver", authenticateJWT, attachAccount, assignCaregiverValidators, validate, assignCaregiver);
 router.patch("/vitals/:patientAccountId", authenticateJWT, attachAccount, updateVitalsThresholdsValidators, validate, updateVitalsThresholds);
