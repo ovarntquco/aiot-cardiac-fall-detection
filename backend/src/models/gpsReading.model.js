@@ -14,3 +14,15 @@ export async function create({ deviceId, latitude, longitude, recordedAt }) {
       .single()
   );
 }
+
+export async function findLatestByDeviceId(deviceId) {
+  return runQuery(
+    supabase
+      .from("gps_readings")
+      .select("device_id, latitude, longitude, recorded_at")
+      .eq("device_id", deviceId)
+      .order("recorded_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  );
+}

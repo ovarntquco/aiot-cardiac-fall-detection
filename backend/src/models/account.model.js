@@ -47,7 +47,7 @@ export async function findByCaregiverAccountId(caregiverAccountId) {
   return runQuery(
     supabase
       .from("accounts")
-      .select(ACCOUNT_SELECTED)
+      .select(ACCOUNT_BASE)
       .eq("caregiver_account_id", caregiverAccountId)
   );
 }

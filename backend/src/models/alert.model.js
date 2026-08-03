@@ -31,10 +31,10 @@ export async function findAlertsByAccountId(accountId) {
         event_id,
         events!inner ( 
           device_id, 
-          recored_at,
+          recorded_at,
           devices!inner ( patient_account_id )
         )
       `)
-      .eq("events.devices.patient_acount_id", accountId)
+      .eq("events.devices.patient_account_id", accountId)
   );
 }

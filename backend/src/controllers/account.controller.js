@@ -31,7 +31,7 @@ export async function getMyAccount(req, res, next) {
       return res.status(400).json({ message: "Missing required field: user.accountId" });
     }
 
-    const account = await Account.findById({ id });
+    const account = await Account.findById({ id, roleRequired: true });
 
     if (!account) {
       return res.status(404).json({ message: "Account not found" });

@@ -15,3 +15,15 @@ export async function create({ deviceId, heartRate, spo2, recordedAt }) {
       .single()
   );
 }
+
+export async function findLatestByDeviceId(deviceId) {
+  return runQuery(
+    supabase
+      .from("cardiac_readings")
+      .select("device_id, heart_rate, spo2, recorded_at")
+      .eq("device_id", deviceId)
+      .order("recorded_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  );
+}
