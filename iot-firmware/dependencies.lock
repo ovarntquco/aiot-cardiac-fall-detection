@@ -34,7 +34,7 @@ dependencies:
       type: service
     version: 1.1.1
   espressif/esp-nn:
-    component_hash: ae8501c099ab2ae1527a23c6170e0c0cb3d914df3293710e033809c79b20f22f
+    component_hash: d341d40c8a135158f2bd47bd3c956bb8eda43358cd555cd887b410310a14c547
     dependencies:
     - name: idf
       require: private
@@ -42,7 +42,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 1.2.4
+    version: 1.2.5
   espressif/esp-tflite-micro:
     component_hash: 22fc501ab0b1bd39377048d608e6fce0e7b55cd07d244cbf41044b24d9b7db2e
     dependencies:
@@ -118,16 +118,6 @@ dependencies:
       registry_url: https://components.espressif.com
       type: service
     version: 1.2.7
-  supcik/buzzer:
-    component_hash: 8fc191ab2efe6526905b597c30aa3bf21e2de54152044197fd00b2dcbf54e4a4
-    dependencies:
-    - name: idf
-      require: private
-      version: '>=5.3'
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    version: 3.0.1
 direct_dependencies:
 - espressif/button
 - espressif/cjson
@@ -137,7 +127,6 @@ direct_dependencies:
 - espressif/qrcode
 - idf
 - k0i05/esp_ssd1306
-- supcik/buzzer
-manifest_hash: 39ad29cc3eca8869fd9c1dcdbf00afb123e6d7b2a4c494cf11d5357afa8bae6c
+manifest_hash: 12b0dfb3cf0e06269a474e0ced6eec89f8b712cf2f8125db614e32739a095d10
 target: esp32s3
 version: 3.0.0

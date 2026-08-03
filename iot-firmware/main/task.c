@@ -1,20 +1,94 @@
+#include <stdlib.h>
+
+#include "esp_err.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 
-#include "mqtt_helper.h"
-#include "json_helper.h"
-
-#include "max30102.h"
-#include "max30102_payload.h"
-
-#include "mpu6050.h"
-#include "mpu6050_payload.h"
-
+#include "iot_button.h"
 #include "ssd1306.h"
 
+#include "buzzer.h"
+#include "event_payload.h"
+#include "json_helper.h"
+#include "led.h"
+#include "max30102.h"
+#include "max30102_payload.h"
+#include "mpu6050.h"
+#include "mpu6050_payload.h"
+#include "mqtt_helper.h"
 #include "nmea_parser.h"
 
 #include "config.h"
+
+typedef enum {
+    CARDIAC_EVENT_NONE     = 0,
+    CARDIAC_EVENT_HR_LOW   = 1,
+    CARDIAC_EVENT_HR_HIGH  = 2,
+    CARDIAC_EVENT_SPO2_LOW = 3,
+} cardiac_event_flags_t;
+
+
+typedef struct {
+    int64_t warmup_start_us;
+    int stable_count;
+    int event_count;
+    cardiac_event_flags_t last_flags;
+} cardiac_monitor_t;
+
+static cardiac_monitor_t s_mon = {0};
+
+static void cardiac_monitor_reset() {
+    s_mon.warmup_start_us = esp_timer_get_time();
+    s_mon.stable_count = 0;
+    s_mon.event_count = 0;
+    s_mon.last_flags = CARDIAC_EVENT_NONE;
+}
+
+static cardiac_event_flags_t process_cardiac_sample(int beat_avg, int spo2) {
+    int64_t elapsed_ms = (esp_timer_get_time() - s_mon.warmup_start_us) / 1000;
+
+    if (elapsed_ms < CARDIAC_SENSOR_WARMUP_MS) {
+        return CARDIAC_EVENT_NONE;
+    }
+
+    bool hr_valid = (beat_avg > 0);
+    bool spo2_valid = (spo2 > -999);
+
+    if (!hr_valid && !spo2_valid) {
+        s_mon.stable_count = 0;
+        return CARDIAC_EVENT_NONE;
+    }
+    s_mon.stable_count++;
+    if (s_mon.stable_count < CARDIAC_REQUIRED_STABLE_SAMPLES) {
+        return CARDIAC_EVENT_NONE;
+    }
+
+    cardiac_event_flags_t flags = CARDIAC_EVENT_NONE;
+    
+    if (hr_valid && beat_avg < max30102_get_hr_low()) {
+        flags = CARDIAC_EVENT_HR_LOW;
+    }
+    if (hr_valid && beat_avg > max30102_get_hr_high()) {
+        flags = CARDIAC_EVENT_HR_HIGH;
+    }
+    if (spo2_valid && spo2 < max30102_get_spo2_low()) {
+        flags = CARDIAC_EVENT_SPO2_LOW;
+    }
+
+    if (flags != CARDIAC_EVENT_NONE && flags == s_mon.last_flags) {
+        s_mon.event_count++;
+    } else {
+        s_mon.event_count = (flags != CARDIAC_EVENT_NONE) ? 1 : 0;
+    }
+    s_mon.last_flags = flags;
+
+    if (flags != CARDIAC_EVENT_NONE && s_mon.event_count >= CARDIAC_REQUIRED_EVENT_SAMPLES) {
+        s_mon.event_count = 0;
+        return flags;
+    }
+
+    return CARDIAC_EVENT_NONE;
+}
 
 void max30102_task(void* pvParameters) {
     max30102_handle_t sensor = pvParameters;
@@ -59,8 +133,10 @@ void max30102_task(void* pvParameters) {
                     rate_spot %= CARDIAC_RATE_AVG_SIZE;
 
                     int sum = 0;
-                    for (int i = 0; i < CARDIAC_RATE_AVG_SIZE; i++)
+                    for (int i = 0; i < CARDIAC_RATE_AVG_SIZE; i++) {
                         sum += rates[i];
+                    }
+
                     beat_avg = sum / CARDIAC_RATE_AVG_SIZE;
                 }
             }
@@ -100,7 +176,8 @@ void max30102_task(void* pvParameters) {
             max30102_set_spo2(spo2);
             max30102_payload_add_sample(&p, beat_avg, (int) spo2);
 
-            bool should_publish = mqtt_is_connected() && 
+            bool should_publish = mqtt_is_connected() &&
+                                  (esp_timer_get_time() - s_mon.warmup_start_us) / 1000 > CARDIAC_SENSOR_WARMUP_MS &&
                                   p.heart_rate > 0 &&
                                   p.spo2 > -999 && 
                                   p.sample_count >= CARDIAC_PUBLISH_EVERY_N_SAMPLES; 
@@ -108,13 +185,32 @@ void max30102_task(void* pvParameters) {
             if (should_publish) {
                 char* payload = json_convert_cardiac(&p);
                 mqtt_publish_topic(payload, MAX30102_TAG, MQTT_TOPIC_CARDIAC);
+                free(payload);
                 max30102_payload_start(&p);
+            }
+
+            cardiac_event_flags_t ev = process_cardiac_sample(beat_avg, spo2);
+            if (ev != CARDIAC_EVENT_NONE) {
+                // local alert
+
+                if (mqtt_is_connected()) {
+                    ESP_LOGI(MQTT_TAG, "sent evetn");
+                    event_payload_t p;
+                    event_payload_start(&p);
+                    event_payload_add_sample(&p, "system");
+
+                    char* payload = json_convert_event(&p);
+                    mqtt_publish_topic(payload, MAX30102_TAG, MQTT_TOPIC_EVENT);
+                    free(payload);
+                    cardiac_monitor_reset();
+                }
             }
         } else {
             ESP_LOGD(MAX30102_TAG, "No finger detected");
             max30102_heartrate_algo_reset(sensor);
             max30102_set_beat_avg(0);
             max30102_set_spo2(-999);
+            cardiac_monitor_reset();
             last_beat_us = 0;
             spo2_buf_idx = 0;
             decim_counter = 0;
@@ -159,6 +255,7 @@ void mpu6050_task(void* pvParameters) {
             if (should_publish) {
                 char* payload = json_convert_motion(&p);
                 mqtt_publish_topic(payload, MPU6050_TAG, MQTT_TOPIC_MOTION);
+                free(payload);
                 mpu6050_payload_start(&p);
             }
         }
@@ -217,11 +314,80 @@ void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int
             if (should_publish) {
                 char* payload = json_convert_gps(&p);
                 mqtt_publish_topic(payload, NEO6MGPS_TAG, MQTT_TOPIC_GPS);
+                free(payload);
                 neo6mgps_payload_start(&p);
             }
             break;
         case GPS_UNKNOWN:
             ESP_LOGW(NEO6MGPS_TAG, "Unknown statement:%s", (char *)event_data);
+            break;
+        default:
+            break;
+    }
+}
+
+static esp_err_t local_alert() {
+    esp_err_t err = buzzer_beep(2000, 200);
+
+    if (ESP_OK != err) {
+        ESP_LOGE(BUZZER_TAG, "Failed to beep");
+    }
+
+    err = led_blink(200, 200, 10);
+
+    if (ESP_OK != err) {
+        ESP_LOGE(LED_TAG, "Failed to blink");
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t stop_alert() {
+    esp_err_t err = buzzer_stop();
+    
+    if (ESP_OK != err) {
+        ESP_LOGE(BUZZER_TAG, "Failed to stop buzzer");
+    }
+
+    err = led_stop();
+    
+    if (ESP_OK != err) {
+        ESP_LOGE(LED_TAG, "Failed to stop led");
+    }
+
+    return ESP_OK;
+}
+
+void button_event_cb(void *arg, void *data) {
+    button_event_t event = iot_button_get_event(arg);
+    esp_err_t err;
+    ESP_LOGI(BUTTON_TAG, "%s", iot_button_get_event_str(event));
+
+    switch (event) {
+        case BUTTON_SINGLE_CLICK:
+            break;
+        case BUTTON_DOUBLE_CLICK:
+            event_payload_t p;
+            event_payload_start(&p);
+            event_payload_add_sample(&p, "user");
+            char* payload = json_convert_event(&p);
+            mqtt_publish_topic(payload, BUTTON_TAG, MQTT_TOPIC_EVENT);
+            free(payload);
+
+            err = local_alert();
+            
+            if (ESP_OK != err) {
+                ESP_LOGE("ALERT", "Failed to trigger local alert");
+            }
+
+            break;
+        case BUTTON_LONG_PRESS_START:
+            err = stop_alert();
+
+            if (ESP_OK != err) {
+                ESP_LOGE("ALERT", "Failed to stop alert");
+            }
+
             break;
         default:
             break;

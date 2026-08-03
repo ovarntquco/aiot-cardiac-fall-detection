@@ -1,20 +1,14 @@
+#include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 #include <sys/time.h>
-#include <stddef.h>
 
 #include "driver/i2c_master.h"
 
-#include "mpu6050.h"
+#include "config.h"
 
-/* MPU6050 register */
-#define MPU6050_GYRO_CONFIG     0x1Bu
-#define MPU6050_ACCEL_CONFIG    0x1Cu
-#define MPU6050_ACCEL_XOUT_H    0x3Bu
-#define MPU6050_GYRO_XOUT_H     0x43u
-#define MPU6050_PWR_MGMT_1      0x6Bu
-#define MPU6050_WHO_AM_I        0x75u
+#include "mpu6050.h"
 
 typedef struct {
     i2c_master_dev_handle_t i2c_dev;

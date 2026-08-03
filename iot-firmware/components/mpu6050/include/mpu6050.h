@@ -10,10 +10,6 @@
 extern "C" {
 #endif
 
-#define MPU6050_I2C_ADDRESS     0x68u
-#define MPU6050_I2C_ADDRESS_1   0x69u
-#define MPU6050_WHO_AM_I_VAL    0x68u
-
 typedef enum {
     ACCE_FS_2G  = 0,
     ACCE_FS_4G  = 1,

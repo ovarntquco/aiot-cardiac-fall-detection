@@ -1,5 +1,18 @@
 idf_component_register(
     SRCS "main.c" "task.c"
-    PRIV_REQUIRES max30102 mpu6050 network_prov_helper mqtt_helper nvs_flash json_helper time_sync nmea_parser
+    REQUIRES 
+        esp_driver_ledc
+    PRIV_REQUIRES
+        nvs_flash
+        button_helper
+        buzzer
+        json_helper
+        led
+        max30102
+        mpu6050
+        mqtt_helper
+        network_prov_helper
+        nmea_parser
+        time_sync
     INCLUDE_DIRS "."
 )

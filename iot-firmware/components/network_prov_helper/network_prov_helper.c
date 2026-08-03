@@ -28,10 +28,6 @@
 
 #include "config.h"
 
-#define PROV_QR_VERSION "v1"
-#define QRCODE_BASE_URL "https://espressif.github.io/esp-jumpstart/qrcode.html"
-#define GPIO_RESET_PROV 15
-
 static EventGroupHandle_t wifi_event_group;
 const int WIFI_CONNECTED_EVENT = BIT0;
 

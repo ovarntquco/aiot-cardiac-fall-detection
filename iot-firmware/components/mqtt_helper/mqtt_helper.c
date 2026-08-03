@@ -1,12 +1,17 @@
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "esp_crt_bundle.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "esp_crt_bundle.h"
-
 #include "mqtt_client.h"
 
 #include "config.h"
+#include "json_helper.h"
+#include "max30102.h"
+
 #include "mqtt_helper.h"
 
 static volatile bool s_mqtt_connected = false;
@@ -21,6 +26,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         case MQTT_EVENT_CONNECTED:
             s_mqtt_connected = true;
             ESP_LOGI(MQTT_TAG, "MQTT connected to HiveMQ");
+            esp_mqtt_client_subscribe(s_mqtt_client, MQTT_TOPIC_VITALS, 1);
             break;
         case MQTT_EVENT_DISCONNECTED:
             s_mqtt_connected = false;
@@ -39,7 +45,18 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             ESP_LOGI(MQTT_TAG, "Data received:");
             ESP_LOGI(MQTT_TAG, "  Topic: %.*s", event->topic_len, event->topic);
             ESP_LOGI(MQTT_TAG, "  Data:  %.*s", event->data_len, event->data);
-            // ONLY PUBLISH IN THIS APP
+
+            if (strncmp(event->topic, MQTT_TOPIC_VITALS, event->topic_len) == 0) {
+                vital_payload_t p = json_parse_vitals(event->data, event->data_len);
+                
+                if (strncmp(p.device_id, DEVICE_ID, sizeof(DEVICE_ID)) == 0) {
+                    max30102_set_hr_low(p.hr_low);
+                    max30102_set_hr_high(p.hr_high);
+                    max30102_set_spo2_low(p.spo2_low);
+                    free(p.device_id);
+                    p.device_id = NULL;
+                }
+            }
             break;
         case MQTT_EVENT_ERROR:
             ESP_LOGE(MQTT_TAG, "MQTT_EVENT_ERROR");
@@ -94,8 +111,6 @@ esp_mqtt_client_handle_t mqtt_get_client() {
 
 bool mqtt_publish_topic(char* payload, const char* tag, const char* topic) {
     int msg_id = esp_mqtt_client_publish(s_mqtt_client, topic, payload, 0, 1, 0);
-
-    free(payload);
 
     if (msg_id < 0) {
         ESP_LOGW(tag, "%s publish failed", topic);

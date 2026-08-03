@@ -1,45 +1,18 @@
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "driver/i2c_master.h"
 #include "driver/i2c_types.h"
-
 #include "esp_err.h"
 #include "esp_timer.h"
-
 #include "freertos/idf_additions.h"
 #include "freertos/projdefs.h"
 
 #include "max30102.h"
 
 #include "config.h"
-
-#define MAX30102_FIFOWRITEPTR   0x04
-#define MAX30102_FIFOOVERFLOW   0x05
-#define MAX30102_FIFOREADPTR    0x06
-#define MAX30102_FIFODATA       0x07
-
-#define MAX30102_FIFOCONFIG     0x08
-#define MAX30102_MODECONFIG     0x09
-#define MAX30102_SPO2CONFIG     0x0A
-#define MAX30102_LED1_PULSEAMP  0x0C
-#define MAX30102_LED2_PULSEAMP  0x0D
-
-#define MAX30102_SAMPLEAVG_MASK     0x1F
-#define MAX30102_ROLLOVER_MASK      0xEF
-#define MAX30102_FIFO_A_FULL_MASK   0xF0
-#define MAX30102_SHUTDOWN_MASK      0x7F
-#define MAX30102_RESET_MASK         0xBF
-#define MAX30102_MODE_MASK          0xF8
-#define MAX30102_ADCRANGE_MASK      0x9F
-#define MAX30102_SAMPLERATE_MASK    0xE3
-#define MAX30102_PULSEWIDTH_MASK    0xFC
-
-#define MAX30102_SHUTDOWN   0x80
-#define MAX30102_WAKEUP     0x00
-#define MAX30102_RESET      0x40         
 
 #ifndef min
 #define min(x, y) ((x) < (y) ? (x) : (y))
@@ -82,6 +55,10 @@ typedef struct {
 
 static int s_beat_avg = 0;
 static int32_t s_spo2 = -999;
+
+static int s_hr_low = 60;
+static int s_hr_high = 100;
+static int s_spo2_low = 80;
 
 static inline int32_t mul16(int16_t x, int16_t y) {
     return (int32_t)x * (int32_t)y;
@@ -651,4 +628,28 @@ void max30102_set_spo2(const int32_t spo2) {
 
 int32_t max30102_get_spo2() {
     return s_spo2;
+}
+
+void max30102_set_hr_low(const int hr_low) {
+    s_hr_low = hr_low;
+}
+
+int max30102_get_hr_low() {
+    return s_hr_low;
+}
+
+void max30102_set_hr_high(const int hr_high) {
+    s_hr_high = hr_high;
+}
+
+int max30102_get_hr_high() {
+    return s_hr_high;
+}
+
+void max30102_set_spo2_low(const int spo2_low) {
+    s_spo2_low = spo2_low;
+}
+
+int max30102_get_spo2_low() {
+    return s_spo2_low;
 }

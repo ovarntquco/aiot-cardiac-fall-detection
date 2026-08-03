@@ -1,6 +1,6 @@
-#include "neo6mgps_payload.h"
-
 #include "time_sync.h"
+
+#include "neo6mgps_payload.h"
 
 void neo6mgps_payload_start(neo6mgps_payload_t *payload) {
     get_iso8601_now(payload->recorded_at, sizeof(payload->recorded_at));

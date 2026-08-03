@@ -1,6 +1,6 @@
 idf_component_register(
-    SRCS "time_sync.c"
+    SRCS "led.c"
     PRIV_REQUIRES
-        lwip
+        main
     INCLUDE_DIRS "include"
 )

@@ -11,6 +11,7 @@ void max30102_task(void* pvParameters);
 void mpu6050_task(void* pvParameters);
 void oled_task(void* pv_parameters);
 void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+void button_event_cb(void *arg, void *data);
 
 #ifdef __cplusplus
 }

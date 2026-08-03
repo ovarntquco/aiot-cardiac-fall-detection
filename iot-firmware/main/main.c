@@ -2,14 +2,16 @@
 
 #include "driver/i2c_types.h"
 #include "driver/i2c_master.h"
-
 #include "esp_err.h"
 #include "esp_log.h"
-
 #include "nvs_flash.h"
 
+#include "iot_button.h"
 #include "ssd1306.h"
 
+#include "button_helper.h"
+#include "buzzer.h"
+#include "led.h"
 #include "max30102.h"
 #include "mpu6050.h"
 #include "mqtt_helper.h"
@@ -45,6 +47,9 @@ static esp_err_t i2c_master_bus_init(i2c_master_bus_handle_t* bus_handle) {
 
 void app_main() {
     esp_err_t err;
+    
+    button_handle_t button = NULL;
+
     i2c_master_bus_handle_t bus_handle = NULL;
     i2c_master_dev_handle_t max_handle = NULL;
     i2c_master_dev_handle_t mpu_handle = NULL;
@@ -72,26 +77,33 @@ void app_main() {
     ESP_ERROR_CHECK(time_sync_init());
     ESP_ERROR_CHECK(mqtt_init());
     
+    err = button_init(&button, button_event_cb);
+    
+    if (ESP_OK != err) {
+        ESP_LOGE(BUTTON_TAG, "Failed to init button");
+        goto cleanup;
+    }
+
+    err = buzzer_init();
+
+    if (ESP_OK != err) {
+        ESP_LOGE(BUZZER_TAG, "Failed to init buzzer");
+        goto cleanup;
+    }
+
+    err = led_init();
+
+    if (ESP_OK != err) {
+        ESP_LOGE(LED_TAG, "Failed to init led");
+        goto cleanup;
+    }
+
     ESP_ERROR_CHECK(i2c_master_bus_init(&bus_handle));
     
     err = ssd1306_init(bus_handle, &ssd1306_cfg, &ssd1306_screen);
     
     if (ESP_OK != err) {
         ESP_LOGE(OLED_TAG, "Failed to init ssd1306 handle: %s", esp_err_to_name(err));
-        goto cleanup;
-    }
-    
-    nmea_sensor = nmea_parser_init(&nmea_cfg);
-
-    if (nmea_sensor == NULL) {
-        ESP_LOGE(NEO6MGPS_TAG, "Failed to init gps");
-        goto cleanup;
-    }
-    
-    err = nmea_parser_add_handler(nmea_sensor, gps_event_handler, NULL);
-    
-    if (ESP_OK != err) {
-        ESP_LOGE(NEO6MGPS_TAG, "Failed to add gps handler: %s", esp_err_to_name(err));
         goto cleanup;
     }
 
@@ -162,6 +174,20 @@ void app_main() {
         goto cleanup;
     }
 
+    nmea_sensor = nmea_parser_init(&nmea_cfg);
+
+    if (nmea_sensor == NULL) {
+        ESP_LOGE(NEO6MGPS_TAG, "Failed to init gps");
+        goto cleanup;
+    }
+    
+    err = nmea_parser_add_handler(nmea_sensor, gps_event_handler, NULL);
+    
+    if (ESP_OK != err) {
+        ESP_LOGE(NEO6MGPS_TAG, "Failed to add gps handler: %s", esp_err_to_name(err));
+        goto cleanup;
+    }
+
     ESP_LOGI("SENSORS", "Sensors initialized, starting tasks");
 
     xTaskCreate(max30102_task, "cardiac_task", 4096, max30102_sensor, 5, NULL);
@@ -202,8 +228,12 @@ cleanup:
     }
 
     if (nmea_sensor) {
-        nmea_parser_remove_handler(nmea_sensor, gps_event_handler);
         nmea_parser_deinit(nmea_sensor);
         nmea_sensor = NULL;
+    }
+
+    if (button) {
+        iot_button_delete(button);
+        button = NULL;
     }
 }

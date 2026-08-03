@@ -1,7 +1,10 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "cJSON.h"
+#include "esp_log.h"
 
 #include "config.h"
-#include "neo6mgps_payload.h"
 
 #include "json_helper.h"
 
@@ -58,5 +61,71 @@ char* json_convert_gps(const neo6mgps_payload_t* p) {
 
     char* payload = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
+    return payload;
+}
+
+char* json_convert_event(const event_payload_t* p) {
+    cJSON* root = cJSON_CreateObject();
+
+    cJSON_AddStringToObject(root, "deviceId", DEVICE_ID);
+    cJSON_AddStringToObject(root, "recordedAt", p->recorded_at);
+    cJSON_AddStringToObject(root, "type", p->type);
+
+    char* payload = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return payload;
+}
+
+static bool json_get_int(cJSON* root, const char* key, int* out) {
+    cJSON* item = cJSON_GetObjectItem(root, key);
+
+    if (!cJSON_IsNumber(item)) {
+        return false;
+    }
+
+    *out = item->valueint;
+
+    return true;
+}
+
+static bool json_get_char(cJSON* root, const char* key, char* out, size_t out_size) {
+    cJSON* item = cJSON_GetObjectItem(root, key);
+
+    if (!cJSON_IsString(item) || item->valuestring == NULL) {
+        return false;
+    }
+
+    strncpy(out, item->valuestring, out_size - 1);
+    out[out_size - 1] = '\0';
+
+    return true;
+}
+
+vital_payload_t json_parse_vitals(const char* const data, size_t data_len) {
+    cJSON* root = cJSON_ParseWithLength(data, data_len);
+
+    if (root == NULL) {
+        ESP_LOGE("JSON_HELPER", "Failed to parse JSON vitals payload");
+        return (vital_payload_t) {NULL, 0, 0, -999};
+    }
+
+    char device_id[37];
+    int hr_low, hr_high, spo2_low;
+    vital_payload_t payload = {
+        .hr_low = json_get_int(root, "hrLow", &hr_low) ? hr_low : 60,
+        .hr_high = json_get_int(root, "hrHigh",&hr_high) ? hr_high : 100,
+        .spo2_low = json_get_int(root, "spo2Low", &spo2_low) ? spo2_low : 80
+    };
+    
+    if (json_get_char(root, "deviceId", device_id, sizeof(device_id))) {
+        payload.device_id = malloc(sizeof(device_id));
+        strncpy(payload.device_id, device_id, sizeof(device_id) - 1);
+        payload.device_id[sizeof(device_id) - 1] = '\0';
+    } else {
+        payload.device_id = NULL;
+    }
+
+    cJSON_Delete(root);
+
     return payload;
 }

@@ -1,5 +1,5 @@
-#include <time.h>
 #include <sys/time.h>
+#include <time.h>
 
 #include "esp_sntp.h"
 #include "esp_log.h"
@@ -50,7 +50,7 @@ void get_iso8601_now(char* buf, size_t buf_size) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     struct tm timeinfo;
-    gmtime_r(&tv.tv_sec, &timeinfo);
+    localtime_r(&tv.tv_sec, &timeinfo);
     snprintf(buf, buf_size, "%04d-%02d-%02dT%02d:%02d:%02d.%06ldZ",
              timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
              timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, tv.tv_usec);

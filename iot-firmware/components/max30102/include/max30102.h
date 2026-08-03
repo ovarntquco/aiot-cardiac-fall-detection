@@ -11,10 +11,6 @@
 extern "C" {
 #endif
 
-#define MAX30102_I2C_ADDRESS    0x57
-#define MAX30102_REV_ID         0xFE
-#define MAX30102_PART_ID        0xFF
-
 typedef enum {
     SAMPLEAVG_1     = 0x00,
     SAMPLEAVG_2     = 0x20,
@@ -108,6 +104,12 @@ void max30102_set_beat_avg(const int beat_avg);
 int max30102_get_beat_avg();
 void max30102_set_spo2(const int32_t spo2);
 int32_t max30102_get_spo2();
+void max30102_set_hr_low(const int hr_low);
+int max30102_get_hr_low();
+void max30102_set_hr_high(const int hr_high);
+int max30102_get_hr_high();
+void max30102_set_spo2_low(const int spo2_low);
+int max30102_get_spo2_low();
 
 #ifdef __cplusplus
 }
