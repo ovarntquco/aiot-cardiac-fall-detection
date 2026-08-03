@@ -12,6 +12,7 @@ const requireEnvVars = [
   "MOTION_TOPIC",
   "GPS_TOPIC",
   "EVENT_TOPIC",
+  "VITALS_TOPIC",
   "BOT_TOKEN",
   "NGROK_URL",
 ];
@@ -36,11 +37,14 @@ export const env = {
   MQTT_PORT: process.env.MQTT_PORT || 8883,
   MQTT_USERNAME: process.env.MQTT_USERNAME,
   MQTT_PASSWORD: process.env.MQTT_PASSWORD,
-  MQTT_TOPICS: {
+  MQTT_SUBSCRIBE_TOPICS: {
     CARDIAC: process.env.CARDIAC_TOPIC,
     MOTION: process.env.MOTION_TOPIC,
     GPS: process.env.GPS_TOPIC,
     EVENT: process.env.EVENT_TOPIC,
+  },
+  MQTT_PUBLISH_TOPICS: {
+    VITALS: process.env.VITALS_TOPIC,
   },
   BOT_TOKEN: process.env.BOT_TOKEN,
   NGROK_URL: process.env.NGROK_URL

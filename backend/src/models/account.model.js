@@ -39,7 +39,7 @@ export async function findByUserId(userId) {
       .from("accounts")
       .select(ACCOUNT_BASE)
       .eq("user_id", userId)
-      .maybeSingle
+      .maybeSingle()
   );
 }
 

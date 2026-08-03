@@ -1,5 +1,9 @@
+import * as Account from "../models/account.model.js";
+import * as Device from "../models/device.model.js";
 import * as User from "../models/user.model.js";
 import * as RefreshToken from "../models/refreshToken.model.js";
+import { env } from "../config/env.js";
+import { publish } from "../config/mqtt.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
 import {
   signAccessToken,
@@ -70,6 +74,29 @@ export async function login(req, res, next) {
     await RefreshToken.create({
       userId: user.id, token: refreshToken, expiresAt: refreshExpiryDate()
     });
+
+    const account = await Account.findByUserId(user.id);
+
+    if (!account) {
+      return res.status(404).json({ message: "User's account not found" });
+    }
+
+    if (user.role == "patient") {
+      const device = await Device.findByPatientAccountId(account.id);
+
+      if (!device) {
+        return res.status(404).json({ message: "User's device not found" });
+      }
+
+      const payload = {
+        deviceId: device.id,
+        hrLow: account.hr_low,
+        hrHigh: account.hr_high,
+        spo2Low: account.spo2_low, 
+      };
+
+      await publish(env.MQTT_PUBLISH_TOPICS.VITALS, payload);
+    }
 
     res
       .cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTIONS)

@@ -46,12 +46,12 @@ export const assignCaregiverValidators = [
 export const updateVitalsThresholdsValidators = [
   body("hrLow")
     .optional()
-    .isInt({ min: 50, max: 100 })
+    .isInt({ min: 60, max: 90 })
     .withMessage("hrLow threshold must be between 50 and 100"),
 
   body("hrHigh")
     .optional()
-    .isInt({ min: 100, max: 150 })
+    .isInt({ min: 100, max: 190 })
     .withMessage("hrHigh threshold must be between 100 and 150"),
     
   body("spo2Low")

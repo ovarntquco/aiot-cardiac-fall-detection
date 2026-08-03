@@ -1,4 +1,7 @@
+import { env } from "../config/env.js";
+import { publish } from "../config/mqtt.js";
 import * as Account from "../models/account.model.js";
+import * as Device from "../models/device.model.js";
 import * as User from "../models/user.model.js";
 
 const ALLOWED_FIELDS = ["hrLow", "hrHigh", "spo2Low"];
@@ -126,10 +129,16 @@ export async function updateVitalsThresholds(req, res, next) {
     const patient = await Account.findById({ id: patientAccountId });
 
     if (!patient) {
-      return res.status(404).json({ message: "Patient account not found" });
+      return res.status(404).json({ message: "Patient's account not found" });
     }
     if (patient.caregiver_account_id !== req.user.accountId) {
       return res.status(403).json({ message: "Only patient's caregiver can assign information" });
+    }
+
+    const device = await Device.findByPatientAccountId(patientAccountId);
+
+    if (!device) {
+      return res.status(404).json({ message: "Patient's device not found" });
     }
 
     const updated = await Account.updateVitalsThresholds({
@@ -138,6 +147,15 @@ export async function updateVitalsThresholds(req, res, next) {
       hrHigh: updates["hrHigh"],
       spo2Low: updates["spo2Low"],
     });
+
+    const payload = {
+      deviceId: device.id,
+      hrLow: updated.hr_low,
+      hrHigh: updated.hr_high,
+      spo2Low: updated.spo2_low,
+    }
+
+    await publish(env.MQTT_PUBLISH_TOPICS.VITALS, payload);
 
     res.json({
       message: "Patient updated successfully",

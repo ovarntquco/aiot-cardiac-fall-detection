@@ -21,27 +21,27 @@ router.use(logMessage);
 router.use(parseJson);
 
 router.on(
-  env.MQTT_TOPICS.CARDIAC,
+  env.MQTT_SUBSCRIBE_TOPICS.CARDIAC,
   validateDevice,
   validateCardiacPayload,
   handleCardiac,
 );
 router.on(
-  env.MQTT_TOPICS.MOTION,
+  env.MQTT_SUBSCRIBE_TOPICS.MOTION,
   validateDevice,
   validateMotionPayload,
   handleMotion,
 );
-router.on(env.MQTT_TOPICS.GPS, validateDevice, validateGpsPayload, handleGps);
+router.on(env.MQTT_SUBSCRIBE_TOPICS.GPS, validateDevice, validateGpsPayload, handleGps);
 router.on(
-  env.MQTT_TOPICS.EVENT,
+  env.MQTT_SUBSCRIBE_TOPICS.EVENT,
   validateDevice,
   validateEventPayload,
   handleEvent,
 );
 
 export default function initMqttRouter() {
-  Object.values(env.MQTT_TOPICS).forEach((topic) => {
+  Object.values(env.MQTT_SUBSCRIBE_TOPICS).forEach((topic) => {
     onTopic(topic, (message, topicName) => {
       router.handle(topicName, message).catch((err) => {
         console.error(`[MQTT] Handler error for ${topicName}:`, err);

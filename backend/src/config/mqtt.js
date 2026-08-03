@@ -15,7 +15,7 @@ const client = mqtt.connect(env.MQTT_BROKER_URL, config);
 client.on("connect", () => {
   console.log(`Connected to MQTT broker at ${env.MQTT_PORT}`);
 
-  let topics = Object.values(env.MQTT_TOPICS);
+  let topics = Object.values(env.MQTT_SUBSCRIBE_TOPICS);
 
   topics.forEach((topic) => {
     client.subscribe(topic, (err) => {
@@ -80,6 +80,24 @@ client.on("disconnect", () => {
 
 export async function onTopic(topic, callback) {
   handlers.set(topic, callback);
+}
+
+export function publish(topic, payload, options = { qos: 1, retain: false }) {
+  return new Promise((resolve, reject) => {
+    const message =
+      typeof payload === "string" || Buffer.isBuffer(payload)
+        ? payload
+        : JSON.stringify(payload);
+
+    client.publish(topic, message, options, (err) => {
+      if (err) {
+        console.error(`Failed to publish to ${topic}:`, err.message);
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
 }
 
 export default client;

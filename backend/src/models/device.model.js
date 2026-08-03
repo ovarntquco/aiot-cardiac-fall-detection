@@ -21,6 +21,16 @@ export async function findById(id) {
   );
 }
 
+export async function findByPatientAccountId(patientAccountId) {
+  return runQuery(
+    supabase
+      .from("devices")
+      .select("*")
+      .eq("patient_account_id", patientAccountId)
+      .maybeSingle()
+  );
+}
+
 export async function findChatIdById(id) {
   return runQuery(
     supabase
