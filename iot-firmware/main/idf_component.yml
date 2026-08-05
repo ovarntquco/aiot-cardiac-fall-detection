@@ -16,7 +16,7 @@ dependencies:
   #   public: true
   espressif/qrcode: ^0.2.0
   espressif/network_provisioning: ^1.2.4
-  espressif/esp-tflite-micro: ^1.3.7
+  # espressif/esp-tflite-micro: ^1.3.7
   k0i05/esp_ssd1306: ^1.2.7
   espressif/mqtt: ^1.0.0
   espressif/cjson: ^1.7.19~2

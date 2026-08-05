@@ -4,6 +4,7 @@ idf_component_register(
         esp_driver_ledc
     PRIV_REQUIRES
         nvs_flash
+        ai_service
         button_helper
         buzzer
         json_helper

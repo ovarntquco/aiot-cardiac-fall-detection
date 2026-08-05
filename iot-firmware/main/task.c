@@ -249,6 +249,8 @@ void mpu6050_task(void* pvParameters) {
                                     acce_value.acce_x, acce_value.acce_y, acce_value.acce_z,
                                     gyro_value.gyro_x, gyro_value.gyro_y, gyro_value.gyro_z);
             
+            // Infer o day
+
             bool should_publish = mqtt_is_connected() && 
                                   p.sample_count >= MOTION_PUBLISH_EVERY_N_SAMPLES;
 
