@@ -4,6 +4,7 @@
 #include "driver/i2c_master.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 
 #include "iot_button.h"
@@ -76,6 +77,13 @@ void app_main() {
     ESP_ERROR_CHECK(network_prov_init());
     ESP_ERROR_CHECK(time_sync_init());
     ESP_ERROR_CHECK(mqtt_init());
+
+    esp_timer_create_args_t timer_args = {
+        .callback = confirm_timeout_cb,
+        .name = "confirm_timer"
+    };
+    esp_timer_handle_t confirm_timer = get_confirm_timer();
+    esp_timer_create(&timer_args, &confirm_timer);
     
     err = button_init(&button, button_event_cb);
     
@@ -235,5 +243,9 @@ cleanup:
     if (button) {
         iot_button_delete(button);
         button = NULL;
+    }
+
+    if (confirm_timer) {
+        esp_timer_delete(confirm_timer);
     }
 }

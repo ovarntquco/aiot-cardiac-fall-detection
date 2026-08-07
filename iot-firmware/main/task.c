@@ -37,6 +37,10 @@ typedef struct {
 
 static cardiac_monitor_t s_mon = {0};
 
+static bool waiting_confirm = false;
+static esp_timer_handle_t confirm_timer;
+static event_payload_t pending_event;
+
 static void cardiac_monitor_reset() {
     s_mon.warmup_start_us = esp_timer_get_time();
     s_mon.stable_count = 0;
@@ -88,6 +92,38 @@ static cardiac_event_flags_t process_cardiac_sample(int beat_avg, int spo2) {
     }
 
     return CARDIAC_EVENT_NONE;
+}
+
+static esp_err_t local_alert() {
+    esp_err_t err = buzzer_beep(2000, 200);
+
+    if (ESP_OK != err) {
+        ESP_LOGE(BUZZER_TAG, "Failed to beep");
+    }
+
+    err = led_blink(200, 200, 10);
+
+    if (ESP_OK != err) {
+        ESP_LOGE(LED_TAG, "Failed to blink");
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t stop_alert() {
+    esp_err_t err = buzzer_stop();
+    
+    if (ESP_OK != err) {
+        ESP_LOGE(BUZZER_TAG, "Failed to stop buzzer");
+    }
+
+    err = led_stop();
+    
+    if (ESP_OK != err) {
+        ESP_LOGE(LED_TAG, "Failed to stop led");
+    }
+
+    return ESP_OK;
 }
 
 void max30102_task(void* pvParameters) {
@@ -190,19 +226,17 @@ void max30102_task(void* pvParameters) {
             }
 
             cardiac_event_flags_t ev = process_cardiac_sample(beat_avg, spo2);
-            if (ev != CARDIAC_EVENT_NONE) {
-                // local alert
 
-                if (mqtt_is_connected()) {
-                    ESP_LOGI(MQTT_TAG, "sent evetn");
-                    event_payload_t p;
-                    event_payload_start(&p);
-                    event_payload_add_sample(&p, "system");
+            if (ev != CARDIAC_EVENT_NONE && !waiting_confirm) {
+                cardiac_monitor_reset();
+                
+                waiting_confirm = true;
+                esp_timer_start_once(confirm_timer, ALERT_CONFIRM_TIMEOUT_MS);
 
-                    char* payload = json_convert_event(&p);
-                    mqtt_publish_topic(payload, MAX30102_TAG, MQTT_TOPIC_EVENT);
-                    free(payload);
-                    cardiac_monitor_reset();
+                err = local_alert();
+
+                if (ESP_OK != err) {
+                    ESP_LOGE("ALERT", "Failed to trigger local alert");
                 }
             }
         } else {
@@ -228,9 +262,11 @@ void mpu6050_task(void* pvParameters) {
     mpu6050_payload_t p;
     mpu6050_payload_start(&p);
 
+    esp_err_t acce_err, gyro_err, err;
+    
     while (1) {
-        esp_err_t acce_err = mpu6050_get_acce(sensor, &acce_value);
-        esp_err_t gyro_err = mpu6050_get_gyro(sensor, &gyro_value);
+        acce_err = mpu6050_get_acce(sensor, &acce_value);
+        gyro_err = mpu6050_get_gyro(sensor, &gyro_value);
 
         if (ESP_OK != acce_err) {
             ESP_LOGE(MPU6050_TAG, "Failed to read accel: %s", esp_err_to_name(acce_err));
@@ -260,6 +296,16 @@ void mpu6050_task(void* pvParameters) {
                 free(payload);
                 mpu6050_payload_start(&p);
             }
+
+            // if (!waiting_confirm) {
+            //     waiting_confirm = true;
+
+            //     err = local_alert();
+
+            //     if (ESP_OK != err) {
+            //         ESP_LOGE("ALERT", "Failed to trigger local alert");
+            //     }
+            // }
         }
 
         vTaskDelay(pdMS_TO_TICKS(1000 / MOTION_SAMPLE_RATE_HZ));
@@ -328,36 +374,14 @@ void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int
     }
 }
 
-static esp_err_t local_alert() {
-    esp_err_t err = buzzer_beep(2000, 200);
-
-    if (ESP_OK != err) {
-        ESP_LOGE(BUZZER_TAG, "Failed to beep");
-    }
-
-    err = led_blink(200, 200, 10);
-
-    if (ESP_OK != err) {
-        ESP_LOGE(LED_TAG, "Failed to blink");
-    }
-
-    return ESP_OK;
+static char* get_event_payload(char* type) {
+    event_payload_start(&pending_event);
+    event_payload_add_sample(&pending_event, type);
+    return json_convert_event(&pending_event);
 }
 
-static esp_err_t stop_alert() {
-    esp_err_t err = buzzer_stop();
-    
-    if (ESP_OK != err) {
-        ESP_LOGE(BUZZER_TAG, "Failed to stop buzzer");
-    }
-
-    err = led_stop();
-    
-    if (ESP_OK != err) {
-        ESP_LOGE(LED_TAG, "Failed to stop led");
-    }
-
-    return ESP_OK;
+esp_timer_handle_t get_confirm_timer() {
+    return confirm_timer;
 }
 
 void button_event_cb(void *arg, void *data) {
@@ -367,12 +391,20 @@ void button_event_cb(void *arg, void *data) {
 
     switch (event) {
         case BUTTON_SINGLE_CLICK:
+            if (mqtt_is_connected() && waiting_confirm) {
+                waiting_confirm = false;
+
+                esp_timer_stop(confirm_timer);
+                
+                ESP_LOGI(MQTT_TAG, "sent event");
+
+                char* payload = get_event_payload("system");
+                mqtt_publish_topic(payload, BUTTON_TAG, MQTT_TOPIC_EVENT);
+                free(payload);   
+            }
             break;
         case BUTTON_DOUBLE_CLICK:
-            event_payload_t p;
-            event_payload_start(&p);
-            event_payload_add_sample(&p, "user");
-            char* payload = json_convert_event(&p);
+            char* payload = get_event_payload("user");
             mqtt_publish_topic(payload, BUTTON_TAG, MQTT_TOPIC_EVENT);
             free(payload);
 
@@ -394,4 +426,16 @@ void button_event_cb(void *arg, void *data) {
         default:
             break;
     }
+}
+
+void confirm_timeout_cb(void* arg) {
+    if (!waiting_confirm) {
+        return;
+    }
+    
+    waiting_confirm = false;
+
+    char* payload = get_event_payload("system");
+    mqtt_publish_topic(payload, BUTTON_TAG, MQTT_TOPIC_EVENT);
+    free(payload);
 }
