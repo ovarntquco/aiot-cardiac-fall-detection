@@ -24,8 +24,8 @@ function AppRoutes() {
       <Route path="/patients/:patientId/overview" element={<PatientOverviewRoute onNav={navigateToScreen} />} />
       <Route path="/patients/:patientId/alerts" element={<PatientAlertsRoute onNav={navigateToScreen} />} />
       <Route path="/patients/:patientId/gps" element={<PatientGpsRoute onNav={navigateToScreen} />} />
-      <Route path="/" element={<RoleLanding />} />
-      <Route path="*" element={<RoleLanding />} />
+      <Route path="/" element={<LoginScreen />} />
+      <Route path="*" element={<LoginScreen />} />
     </Routes>
   );
 }
