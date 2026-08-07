@@ -433,9 +433,13 @@ void confirm_timeout_cb(void* arg) {
         return;
     }
     
-    waiting_confirm = false;
+    if (mqtt_is_connected() && waiting_confirm) {
+        waiting_confirm = false;
 
-    char* payload = get_event_payload("system");
-    mqtt_publish_topic(payload, BUTTON_TAG, MQTT_TOPIC_EVENT);
-    free(payload);
+        ESP_LOGI(MQTT_TAG, "sent event");
+
+        char* payload = get_event_payload("system");
+        mqtt_publish_topic(payload, BUTTON_TAG, MQTT_TOPIC_EVENT);
+        free(payload);
+    }
 }
