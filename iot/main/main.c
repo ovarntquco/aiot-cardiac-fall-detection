@@ -1,0 +1,206 @@
+#include <stdint.h>
+
+#include "driver/i2c_types.h"
+#include "driver/i2c_master.h"
+#include "esp_err.h"
+#include "esp_log.h"
+#include "esp_timer.h"
+#include "nvs_flash.h"
+
+#include "ssd1306.h"
+
+#include "button.h"
+#include "buzzer.h"
+#include "led.h"
+#include "max30102.h"
+#include "mpu6050.h"
+#include "mqtt_helper.h"
+#include "network_prov_helper.h"
+#include "nmea_parser.h"
+#include "time_sync.h"
+
+#include "config.h"
+#include "task.h"
+
+static esp_err_t add_device(i2c_master_bus_handle_t bus_handle, i2c_master_dev_handle_t* dev_handle, uint8_t dev_addr) {
+    i2c_device_config_t dev_cfg = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = dev_addr,
+        .scl_speed_hz = I2C_SPEED_HZ,
+    };
+
+    return i2c_master_bus_add_device(bus_handle, &dev_cfg, dev_handle);
+}
+
+static esp_err_t i2c_master_bus_init(i2c_master_bus_handle_t* bus_handle) {
+    i2c_master_bus_config_t bus_cfg = {
+        .i2c_port = I2C_PORT,
+        .sda_io_num = I2C_SDA_PIN,
+        .scl_io_num = I2C_SCL_PIN,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = I2C_GLITCH_IGNORE,
+        .flags.enable_internal_pullup = true,
+    };
+
+    return i2c_new_master_bus(&bus_cfg, bus_handle);
+}
+
+void app_main() {
+    esp_err_t ret;
+    
+    button_handle_t button = NULL;
+
+    i2c_master_bus_handle_t bus_handle = NULL;
+    i2c_master_dev_handle_t max_handle = NULL;
+    i2c_master_dev_handle_t mpu_handle = NULL;
+    max30102_handle_t max30102_sensor = NULL;
+    mpu6050_handle_t mpu6050_sensor = NULL;
+
+    ssd1306_config_t ssd1306_cfg = I2C_SSD1306_128x32_CONFIG_DEFAULT;
+    ssd1306_handle_t ssd1306_screen = NULL;
+    
+    nmea_parser_config_t nmea_cfg = NMEA_PARSER_CONFIG_DEFAULT();
+    nmea_parser_handle_t nmea_sensor = NULL;
+
+    // ESP_ERROR_CHECK(nvs_flash_erase());
+    
+    ret = nvs_flash_init();
+    
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    
+    ESP_ERROR_CHECK(ret);
+
+    ESP_ERROR_CHECK(network_prov_init());
+    ESP_ERROR_CHECK(time_sync_init());
+    ESP_ERROR_CHECK(mqtt_init());
+
+    esp_timer_create_args_t timer_args = {
+        .callback = confirm_timeout_cb,
+        .name = "confirm_timer"
+    };
+    esp_timer_handle_t confirm_timer = get_confirm_timer();
+    ret = esp_timer_create(&timer_args, &confirm_timer);
+    
+    if (ESP_OK != ret) {
+        ESP_LOGE("TIMER", "Failed to init timer");
+        goto cleanup;
+    }
+
+    ret = button_init(&button, button_event_cb);
+    if (ESP_OK != ret) {
+        ESP_LOGE(BUTTON_TAG, "Failed to init button: %s", esp_err_to_name(ret));
+        goto cleanup;
+    }
+
+    ret = buzzer_init();
+    if (ESP_OK != ret) {
+        ESP_LOGE(BUZZER_TAG, "Failed to init buzzer: %s", esp_err_to_name(ret));
+        goto cleanup;
+    }
+
+    ret = led_init();
+    if (ESP_OK != ret) {
+        ESP_LOGE(LED_TAG, "Failed to init led: %s", esp_err_to_name(ret));
+        goto cleanup;
+    }
+
+    ESP_ERROR_CHECK(i2c_master_bus_init(&bus_handle));
+    
+    ret = ssd1306_init(bus_handle, &ssd1306_cfg, &ssd1306_screen);
+    if (ESP_OK != ret) {
+        ESP_LOGE(OLED_TAG, "Failed to init ssd1306 handle: %s", esp_err_to_name(ret));
+        goto cleanup;
+    }
+
+    ret = max30102_sensor_init(bus_handle, &max_handle, &max30102_sensor);
+    if (ret != ESP_OK) {
+        ESP_LOGE(MAX30102_TAG, "Failed to init max30102 sensor: %s", esp_err_to_name(ret));
+        goto cleanup;
+    }
+
+    ret = add_device(bus_handle, &mpu_handle, MPU6050_I2C_ADDRESS);
+
+    if (ESP_OK != ret) {
+        ESP_LOGE(MPU6050_TAG, "Failed to add MPU6050: %s", esp_err_to_name(ret));
+        goto cleanup;
+    }
+
+    // ret = mpu6050_sensor_init(bus_handle, &mpu_handle, &mpu6050_sensor);
+    // if (ret != ESP_OK) {
+    //     ESP_LOGE(MPU6050_TAG, "Failed to init mpu6050 sensor: %s", esp_err_to_name(ret));
+    //     goto cleanup;
+    // }
+
+    mpu6050_sensor = mpu6050_create(mpu_handle);
+    
+    if (mpu6050_sensor == NULL) {
+        ESP_LOGE(MPU6050_TAG, "Failed to allocate MPU6050 handle");
+        goto cleanup;
+    }
+
+    ret = mpu6050_config(mpu6050_sensor, ACCE_FS_2G, GYRO_FS_250DPS);
+    
+    if (ESP_OK != ret) {
+        ESP_LOGE(MPU6050_TAG, "Failed to config MPU6050: %s", esp_err_to_name(ret));
+        goto cleanup;
+    }
+
+    ret = mpu6050_wakeup(mpu6050_sensor);
+
+    if (ESP_OK != ret) {
+        ESP_LOGE(MPU6050_TAG, "Failed to wake MPU6050: %s", esp_err_to_name(ret));
+        goto cleanup;
+    }
+
+    nmea_sensor = nmea_parser_init(&nmea_cfg);
+
+    if (nmea_sensor == NULL) {
+        ESP_LOGE(NEO6MGPS_TAG, "Failed to init gps");
+        goto cleanup;
+    }
+    
+    ret = nmea_parser_add_handler(nmea_sensor, gps_event_handler, NULL);
+    
+    if (ESP_OK != ret) {
+        ESP_LOGE(NEO6MGPS_TAG, "Failed to add gps handler: %s", esp_err_to_name(ret));
+        goto cleanup;
+    }
+
+    ESP_LOGI("SENSORS", "Sensors initialized, starting tasks");
+
+    xTaskCreate(max30102_task, "cardiac_task", 4096, max30102_sensor, 5, NULL);
+    xTaskCreate(mpu6050_task, "motion_task", 8192, mpu6050_sensor, 5, NULL);
+    xTaskCreate(oled_task, "oled_display_task", 2048, ssd1306_screen, 5, NULL);
+
+    return;
+    
+cleanup:
+    button_deinit(button);
+    buzzer_deinit();
+    led_deinit();
+
+    max30102_sensor_deinit(max_handle, max30102_sensor);
+    // mpu6050_sensor_deinit(mpu_handle, mpu6050_sensor);
+
+    if (ssd1306_screen) {
+        ssd1306_remove(ssd1306_screen);
+        ssd1306_screen = NULL;
+    }
+
+    if (bus_handle) {
+        i2c_del_master_bus(bus_handle);
+        bus_handle = NULL;
+    }
+
+    if (nmea_sensor) {
+        nmea_parser_deinit(nmea_sensor);
+        nmea_sensor = NULL;
+    }
+
+    if (confirm_timer) {
+        esp_timer_delete(confirm_timer);
+    }
+}
