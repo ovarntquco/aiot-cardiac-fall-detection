@@ -7,12 +7,7 @@ import { SettingsScreen } from "./screens/SettingsScreen";
 import { PatientListScreen } from "./screens/PatientListScreen";
 import { GpsScreen } from "./screens/GpsScreen";
 import { RoleProvider } from "./contexts/RoleContext";
-import {
-  PatientAlertsRoute,
-  PatientGpsRoute,
-  PatientOnly,
-  PatientOverviewRoute,
-} from "./lib/helper";
+import { PatientOnly, PatientOverviewRoute, PatientAlertsRoute, PatientGpsRoute } from "./lib/helper";
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -20,12 +15,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path={screenPaths.login} element={<LoginScreen />} />
-      <Route path={screenPaths.home} element={<PatientOnly><HomeScreen onNav={navigateToScreen} /></PatientOnly>} />
-      <Route path={screenPaths.alerts} element={<PatientOnly><AlertHistoryScreen onNav={navigateToScreen} /></PatientOnly>} />
-      <Route path={screenPaths.patients} element={<PatientListScreen onNav={navigateToScreen} />} />
-      <Route path={screenPaths.gps} element={<PatientOnly><GpsScreen onNav={navigateToScreen} /></PatientOnly>} />
-      <Route path={screenPaths.settings} element={<PatientOnly><SettingsScreen onNav={navigateToScreen} /></PatientOnly>} />
+      <Route path={screenPaths["login"]} element={<LoginScreen />} />
+      <Route path={screenPaths["home"]} element={<PatientOnly><HomeScreen onNav={navigateToScreen} /></PatientOnly>} />
+      <Route path={screenPaths["alerts"]} element={<PatientOnly><AlertHistoryScreen onNav={navigateToScreen} /></PatientOnly>} />
+      <Route path={screenPaths["patients"]} element={<PatientListScreen onNav={navigateToScreen} />} />
+      <Route path={screenPaths["gps"]} element={<PatientOnly><GpsScreen onNav={navigateToScreen} /></PatientOnly>} />
+      <Route path={screenPaths["settings"]} element={<PatientOnly><SettingsScreen onNav={navigateToScreen} /></PatientOnly>} />
       <Route path={screenPaths["patient-overview"]} element={<PatientOverviewRoute onNav={navigateToScreen} />} />
       <Route path={screenPaths["patient-alerts"]} element={<PatientAlertsRoute onNav={navigateToScreen} />} />
       <Route path={screenPaths["patient-gps"]} element={<PatientGpsRoute onNav={navigateToScreen} />} />
