@@ -26,7 +26,6 @@ export function Sidebar({
 }) {
   const { role } = useRole();
   const navigate = useNavigate();
-  const patientPath = patientId ? `/patients/${encodeURIComponent(patientId)}` : null;
 
   const navItems: NavItem[] = role === "caregiver"
     ? [
@@ -37,7 +36,7 @@ export function Sidebar({
           active: current === "patients" && !patientSection,
           onClick: () => onNav("patients"),
         },
-        ...(patientPath ? [
+        ...(patientId ? [
           createPatientItem("overview", "Health Overview", <Activity size={18} />),
           createPatientItem("alerts", "Alert History", <Bell size={18} />),
           createPatientItem("gps", "GPS Location", <MapPin size={18} />),
@@ -60,7 +59,7 @@ export function Sidebar({
       label,
       icon,
       active: patientSection === section,
-      onClick: () => navigate(`${patientPath}/${section}`),
+      onClick: () => navigate(`/patients/${section}?patientId=${encodeURIComponent(patientId!)}`),
       nested: true,
     };
   }
