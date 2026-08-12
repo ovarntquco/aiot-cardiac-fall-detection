@@ -6,12 +6,10 @@
 
 char* event_payload_source_to_str(event_source_t type) {
     switch (type) {
-        case EVENT_PAYLOAD_SYSTEM: {
+        case EVENT_PAYLOAD_SYSTEM:
             return "system";
-        }
-        case EVENT_PAYLOAD_USER: {
+        case EVENT_PAYLOAD_USER:
             return "user";
-        }
         default:
             return "unknown";
     }

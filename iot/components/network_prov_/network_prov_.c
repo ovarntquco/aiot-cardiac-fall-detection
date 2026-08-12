@@ -24,7 +24,7 @@
 #include "portmacro.h"
 #include "protocomm_security.h"
 
-#include "network_prov_helper.h"
+#include "network_prov_.h"
 
 #include "config.h"
 

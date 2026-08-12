@@ -1,10 +1,10 @@
 idf_component_register(
-    SRCS "network_prov_helper.c"
+    SRCS "network_prov_.c"
     PRIV_REQUIRES
         esp_driver_gpio
         esp_wifi
-        main
         network_provisioning
         qrcode
+        main
     INCLUDE_DIRS "include"
 )

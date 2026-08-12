@@ -7,12 +7,12 @@ idf_component_register(
         ai_service
         button_
         buzzer
-        json_helper
+        json_
         led
         max30102
         mpu6050
-        mqtt_helper
-        network_prov_helper
+        mqtt_
+        network_prov_
         nmea_parser
         time_sync
     INCLUDE_DIRS "."

@@ -1,47 +1,38 @@
 #ifndef MPU6050_PAYLOAD_H
 #define MPU6050_PAYLOAD_H
 
-#include <stdint.h>
-
-#include "model_metadata.h"
-#include "config.h"
+#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef enum {
+    MPU6050_PAYLOAD_INFER = 0,
+    MPU6050_PAYLOAD_MQTT = 1
+} mpu6050_payload_type_t;
+
 typedef struct {
-    char window_start_iso[32];
+    float acce_x;
+    float acce_y;
+    float acce_z;
+    float gyro_x;
+    float gyro_y;
+    float gyro_z;
+} mpu6050_data_t;
+
+typedef struct {
+    mpu6050_data_t* data;
+    int64_t window_start;
     int64_t batch_start_us;
-    int t_offsets[MOTION_BATCH_SIZE];
+    int* t_offsets;
     int sample_count;
-    float acce_x[MOTION_BATCH_SIZE];
-    float acce_y[MOTION_BATCH_SIZE];
-    float acce_z[MOTION_BATCH_SIZE];
-    float gyro_x[MOTION_BATCH_SIZE];
-    float gyro_y[MOTION_BATCH_SIZE];
-    float gyro_z[MOTION_BATCH_SIZE];
-} mpu6050_mqtt_payload_t;
+} mpu6050_payload_t;
 
-typedef struct {
-    int sample_count;
-    float acce_x[EI_CLASSIFIER_RAW_SAMPLE_COUNT];
-    float acce_y[EI_CLASSIFIER_RAW_SAMPLE_COUNT];
-    float acce_z[EI_CLASSIFIER_RAW_SAMPLE_COUNT];
-    float gyro_x[EI_CLASSIFIER_RAW_SAMPLE_COUNT];
-    float gyro_y[EI_CLASSIFIER_RAW_SAMPLE_COUNT];
-    float gyro_z[EI_CLASSIFIER_RAW_SAMPLE_COUNT];
-} mpu6050_infer_payload_t;
-
-void mpu6050_mqtt_payload_start(mpu6050_mqtt_payload_t *payload);
-bool mpu6050_mqtt_payload_is_full(mpu6050_mqtt_payload_t *payload);
-void mpu6050_mqtt_payload_add_sample(mpu6050_mqtt_payload_t *payload, float ax, float ay,
-                                     float az, float gx, float gy, float gz);
-
-void mpu6050_infer_payload_start(mpu6050_infer_payload_t *payload);
-bool mpu6050_infer_payload_is_full(mpu6050_infer_payload_t *payload);
-void mpu6050_infer_payload_add_sample(mpu6050_infer_payload_t *payload, float ax, float ay,
-                                     float az, float gx, float gy, float gz);
+esp_err_t mpu6050_payload_start(mpu6050_payload_t* const payload, mpu6050_payload_type_t type);
+esp_err_t mpu6050_payload_is_full(const mpu6050_payload_t* const payload, mpu6050_payload_type_t type, uint8_t* const is_full);
+esp_err_t mpu6050_payload_add_sample(mpu6050_payload_t* const payload, mpu6050_payload_type_t type,
+                                     float ax, float ay, float az, float gx, float gy, float gz);
 
 #ifdef __cplusplus
 }

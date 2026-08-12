@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "json_helper.c"
+    SRCS "json_.c"
     REQUIRES
         event_payload
         max30102

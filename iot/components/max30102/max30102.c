@@ -461,7 +461,7 @@ esp_err_t max30102_sensor_init(i2c_master_bus_handle_t bus_handle,
 
     *sensor = max30102_create(*dev_handle);
     if (NULL == *sensor) {
-        ESP_LOGE(MAX30102_TAG, "Failed to create sensor during init: %s", esp_err_to_name(ret));
+        ESP_LOGE(MAX30102_TAG, "Failed to create sensor during init");
         i2c_master_bus_rm_device(*dev_handle);
         *dev_handle = NULL;
         return ESP_ERR_NO_MEM;

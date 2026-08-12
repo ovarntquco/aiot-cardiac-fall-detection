@@ -1,10 +1,10 @@
 idf_component_register(
-    SRCS "mqtt_helper.c"
+    SRCS "mqtt_.c"
+    REQUIRES mqtt
     PRIV_REQUIRES
-        json_helper
+        mbedtls
+        json_
         main
         max30102
-        mbedtls
-    REQUIRES mqtt
     INCLUDE_DIRS "include"
 )

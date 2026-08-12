@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "button.c"
+    SRCS "button_.c"
     PRIV_REQUIRES button
     INCLUDE_DIRS "include"
 )

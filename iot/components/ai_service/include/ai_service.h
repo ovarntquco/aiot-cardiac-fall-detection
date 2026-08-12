@@ -9,7 +9,9 @@
 extern "C" {
 #endif
 
-esp_err_t inference(const mpu6050_infer_payload_t* payload, bool* const is_fall);
+#define INFERENCE_TAG "INFERENCE"
+
+esp_err_t inference(const mpu6050_payload_t* payload, uint8_t* const is_fall);
 
 #ifdef __cplusplus
 }

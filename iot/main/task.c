@@ -8,25 +8,23 @@
 #include "ssd1306.h"
 
 #include "ai_service.h"
-#include "button.h"
+#include "button_.h"
 #include "buzzer.h"
 #include "event_payload.h"
-#include "json_helper.h"
+#include "json_.h"
 #include "led.h"
 #include "max30102.h"
 #include "max30102_payload.h"
-#include "model_metadata.h"
 #include "mpu6050.h"
 #include "mpu6050_payload.h"
-#include "mqtt_helper.h"
+#include "mqtt_.h"
 #include "nmea_parser.h"
 
 #include "config.h"
+#include "task.h"
 
-#define ALERT_TAG "ALERT"
-
-static bool waiting_confirm = false;
-static esp_timer_handle_t confirm_timer;
+static uint8_t waiting_confirm = 0;
+static esp_timer_handle_t s_confirm_timer;
 static event_payload_t pending_event;
 
 static esp_err_t local_alert() {
@@ -122,14 +120,16 @@ void max30102_task(void* pvParameters) {
 
                 ++spo2_buf_idx;
                 if (spo2_buf_idx >= CARDIAC_BUFFER_SIZE) {
-                    max30102_heartrate_and_spo2(sensor,
-                                                ir_buffer,
-                                                CARDIAC_BUFFER_SIZE,
-                                                red_buffer,
-                                                &spo2,
-                                                &spo2_valid,
-                                                &spo2_hr,
-                                                &spo2_hr_valid);
+                    max30102_heartrate_and_spo2(
+                        sensor,
+                        ir_buffer,
+                        CARDIAC_BUFFER_SIZE,
+                        red_buffer,
+                        &spo2,
+                        &spo2_valid,
+                        &spo2_hr,
+                        &spo2_hr_valid
+                    );
                     spo2_buf_idx = 0;
                 }
             }
@@ -158,9 +158,9 @@ void max30102_task(void* pvParameters) {
             if (ev != CARDIAC_EVENT_NONE && !waiting_confirm) {
                 max30102_monitor_reset(&monitor);
                 
-                waiting_confirm = true;
+                waiting_confirm = 1;
                 
-                esp_timer_start_once(confirm_timer, ALERT_CONFIRM_TIMEOUT_MS);
+                esp_timer_start_once(s_confirm_timer, ALERT_CONFIRM_TIMEOUT_MS);
                 
                 ret = local_alert();
                 if (ret != ESP_OK) {
@@ -186,71 +186,72 @@ void mpu6050_task(void* pvParameters) {
 
     mpu6050_acce_value_t acce_value;
     mpu6050_gyro_value_t gyro_value;
-    mpu6050_mqtt_payload_t mqtt_p;
-    mpu6050_infer_payload_t infer_p;
-    mpu6050_mqtt_payload_start(&mqtt_p);
-    mpu6050_infer_payload_start(&infer_p);
 
-    esp_err_t acce_err, gyro_err, ret;
+    mpu6050_payload_t infer_p, mqtt_p;
+    mpu6050_payload_start(&infer_p, MPU6050_PAYLOAD_INFER);
+    mpu6050_payload_start(&mqtt_p, MPU6050_PAYLOAD_MQTT);
+
+    esp_err_t acce_ret, gyro_ret, ret;
     
+    uint8_t should_publish = 0, should_inference = 0;
     while (1) {
-        acce_err = mpu6050_get_acce(sensor, &acce_value);
-        gyro_err = mpu6050_get_gyro(sensor, &gyro_value);
-
-        if (ESP_OK != acce_err) {
-            ESP_LOGE(MPU6050_TAG, "Failed to read accel: %s", esp_err_to_name(acce_err));
+        acce_ret = mpu6050_get_acce(sensor, &acce_value);
+        if (acce_ret != ESP_OK) {
+            ESP_LOGE(MPU6050_TAG, "Failed to read accel: %s", esp_err_to_name(acce_ret));
+            continue;
+        }
+        
+        gyro_ret = mpu6050_get_gyro(sensor, &gyro_value);
+        if (gyro_ret != ESP_OK) {
+            ESP_LOGE(MPU6050_TAG, "Failed to read gyro: %s", esp_err_to_name(gyro_ret));
+            continue;
         }
 
-        if (ESP_OK != gyro_err) {
-            ESP_LOGE(MPU6050_TAG, "Failed to read gyro: %s", esp_err_to_name(gyro_err));
-        }
+        if (ESP_OK == acce_ret && ESP_OK == gyro_ret) {
+            // ESP_LOGI(MPU6050_TAG, "acce_x=%.3f acce_y=%.3f acce_z=%.3f | gyro_x=%.3f gyro_y=%.3f gyro_z=%.3f",
+            //          acce_value.acce_x, acce_value.acce_y, acce_value.acce_z,
+            //          gyro_value.gyro_x, gyro_value.gyro_y, gyro_value.gyro_z);
 
-        if (ESP_OK == acce_err && ESP_OK == gyro_err) {
-            ESP_LOGI(MPU6050_TAG, "acce_x=%.3f acce_y=%.3f acce_z=%.3f | gyro_x=%.3f gyro_y=%.3f gyro_z=%.3f",
-                     acce_value.acce_x, acce_value.acce_y, acce_value.acce_z,
-                     gyro_value.gyro_x, gyro_value.gyro_y, gyro_value.gyro_z);
-
-            mpu6050_mqtt_payload_add_sample(&mqtt_p, 
-                                    acce_value.acce_x, acce_value.acce_y, acce_value.acce_z,
-                                    gyro_value.gyro_x, gyro_value.gyro_y, gyro_value.gyro_z);
+            mpu6050_payload_add_sample(&infer_p, MPU6050_PAYLOAD_INFER,
+                                       acce_value.acce_x, acce_value.acce_y, acce_value.acce_z,
+                                       gyro_value.gyro_x, gyro_value.gyro_y, gyro_value.gyro_z);
             
-            mpu6050_infer_payload_add_sample(&infer_p, 
-                                    acce_value.acce_x, acce_value.acce_y, acce_value.acce_z,
-                                    gyro_value.gyro_x, gyro_value.gyro_y, gyro_value.gyro_z);
+            mpu6050_payload_add_sample(&mqtt_p, MPU6050_PAYLOAD_MQTT,
+                                       acce_value.acce_x, acce_value.acce_y, acce_value.acce_z,
+                                       gyro_value.gyro_x, gyro_value.gyro_y, gyro_value.gyro_z);
             
-            bool should_publish = mqtt_is_connected() && 
-                                  mqtt_p.sample_count >= MOTION_PUBLISH_EVERY_N_SAMPLES;
-
+            mpu6050_payload_is_full(&mqtt_p, MPU6050_PAYLOAD_MQTT, &should_publish);
+            should_publish &= mqtt_is_connected();
             if (should_publish) {
                 char* payload = json_convert_motion(&mqtt_p);
                 mqtt_publish_topic(payload, MPU6050_TAG, MQTT_TOPIC_MOTION);
                 free(payload);
-                mpu6050_mqtt_payload_start(&mqtt_p);
+                mpu6050_payload_start(&mqtt_p, MPU6050_PAYLOAD_MQTT);
             }
 
-            bool should_inference = infer_p.sample_count >= EI_CLASSIFIER_RAW_SAMPLE_COUNT;
-
+            mpu6050_payload_is_full(&infer_p, MPU6050_PAYLOAD_INFER, &should_inference);
             if (should_inference) {
-                bool is_fall = false;
+                uint8_t is_fall = 0;
                 ret = inference(&infer_p, &is_fall);
-                
                 if (ret != ESP_OK) {
-                    ESP_LOGE("INFERENCE", "Failed to inference");
+                    ESP_LOGE("INFERENCE", "Failed to inference during mpu6050 task: %s", esp_err_to_name(ret));
                     continue;
                 }
 
                 if (is_fall & !waiting_confirm) {
-                    waiting_confirm = true;
-                    ret = local_alert();
+                    waiting_confirm = 1;
 
+                    esp_timer_start_once(s_confirm_timer, ALERT_CONFIRM_TIMEOUT_MS);
+
+                    ret = local_alert();
                     if (ret != ESP_OK) {
-                        ESP_LOGE("ALERT", "Failed to trigger local alert");
+                        ESP_LOGE(ALERT_TAG, "Failed to trigger local alert during mpu6050 task: %s", esp_err_to_name(ret));
+                        continue;
                     }
                 }
-                mpu6050_infer_payload_start(&infer_p);
+                mpu6050_payload_start(&infer_p, MPU6050_PAYLOAD_INFER);
             }
         }
-
         vTaskDelay(pdMS_TO_TICKS(1000 / MOTION_SAMPLE_RATE_HZ));
     }
 }
@@ -322,8 +323,8 @@ static char* get_event_payload(event_source_t type) {
     return json_convert_event(&pending_event);
 }
 
-esp_timer_handle_t get_confirm_timer() {
-    return confirm_timer;
+void set_confirm_timer(esp_timer_handle_t confirm_timer) {
+    s_confirm_timer = confirm_timer;
 }
 
 void button_event_cb(void *arg, void *data) {
@@ -334,9 +335,9 @@ void button_event_cb(void *arg, void *data) {
     switch (event) {
         case BUTTON_SINGLE_CLICK:
             if (mqtt_is_connected() && waiting_confirm) {
-                waiting_confirm = false;
+                waiting_confirm = 0;
 
-                esp_timer_stop(confirm_timer);
+                esp_timer_stop(s_confirm_timer);
                 
                 ESP_LOGI(MQTT_TAG, "sent event");
 
@@ -376,7 +377,7 @@ void confirm_timeout_cb(void* arg) {
     }
     
     if (mqtt_is_connected() && waiting_confirm) {
-        waiting_confirm = false;
+        waiting_confirm = 0;
 
         ESP_LOGI(MQTT_TAG, "sent event");
 

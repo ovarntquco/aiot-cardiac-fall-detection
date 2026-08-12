@@ -18,7 +18,7 @@ typedef struct {
 } vital_payload_t;
 
 char* json_convert_cardiac(const max30102_payload_t* const p);
-char* json_convert_motion(const mpu6050_mqtt_payload_t* const p);
+char* json_convert_motion(const mpu6050_payload_t* const p);
 char* json_convert_gps(const neo6mgps_payload_t* const p);
 char* json_convert_event(const event_payload_t* const p);
 vital_payload_t json_parse_vitals(const char* const data, size_t data_len);

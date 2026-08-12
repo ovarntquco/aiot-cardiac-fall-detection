@@ -1,23 +1,19 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "esp_crt_bundle.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "mqtt_client.h"
 
 #include "config.h"
-#include "json_helper.h"
+#include "json_.h"
 #include "max30102.h"
 
-#include "mqtt_helper.h"
+#include "mqtt_.h"
 
-static volatile bool s_mqtt_connected = false;
+static uint8_t s_mqtt_connected;
 static esp_mqtt_client_handle_t s_mqtt_client;
 
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
+static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data) {
     ESP_LOGD(MQTT_TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32, base, event_id);
 
     esp_mqtt_event_handle_t event = event_data;
@@ -50,9 +46,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                 vital_payload_t p = json_parse_vitals(event->data, event->data_len);
                 
                 if (strncmp(p.device_id, DEVICE_ID, sizeof(DEVICE_ID)) == 0) {
-                    max30102_set_hr_low(p.hr_low);
-                    max30102_set_hr_high(p.hr_high);
-                    max30102_set_spo2_low(p.spo2_low);
+                    max30102_set_stats_for_task(p.hr_low, p.hr_high, p.spo2_low);
                     free(p.device_id);
                     p.device_id = NULL;
                 }
@@ -87,21 +81,27 @@ esp_err_t mqtt_init() {
     };
 
     s_mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
-
     if (NULL == s_mqtt_client) {
+        ESP_LOGE(MQTT_TAG, "Failed to init mqtt-client");
         return ESP_FAIL;
     }
 
-    esp_err_t err = esp_mqtt_client_register_event(s_mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-    
-    if (ESP_OK != err) {
-        return err;
+    esp_err_t ret = esp_mqtt_client_register_event(s_mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    if (ret != ESP_OK) {
+        ESP_LOGE(MQTT_TAG, "Failed to register event-handler for mqtt-client: %s", esp_err_to_name(ret));
+        return ret;
     }
     
-    return esp_mqtt_client_start(s_mqtt_client);
+    ret = esp_mqtt_client_start(s_mqtt_client);
+    if (ret != ESP_OK) {
+        ESP_LOGE(MQTT_TAG, "Failed to start mqtt-client: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    return ESP_OK;
 }
 
-bool mqtt_is_connected() {
+uint8_t mqtt_is_connected() {
     return s_mqtt_connected;
 }
 
@@ -109,13 +109,11 @@ esp_mqtt_client_handle_t mqtt_get_client() {
     return s_mqtt_client;
 }
 
-bool mqtt_publish_topic(char* payload, const char* tag, const char* topic) {
+uint8_t mqtt_publish_topic(char* const payload, const char* tag, const char* topic) {
     int msg_id = esp_mqtt_client_publish(s_mqtt_client, topic, payload, 0, 1, 0);
-
     if (msg_id < 0) {
         ESP_LOGW(tag, "%s publish failed", topic);
-        return false;
+        return 0;
     }
-
-    return true;
+    return 1;
 }

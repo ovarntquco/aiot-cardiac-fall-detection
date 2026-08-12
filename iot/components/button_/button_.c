@@ -5,7 +5,7 @@
 #include "button_gpio.h"
 #include "iot_button.h"
 
-#include "button.h"
+#include "button_.h"
 
 #define BUTTON_ACTIVE_LEVEL     (0)
 #define BUTTON_GPIO_NUM         (2)

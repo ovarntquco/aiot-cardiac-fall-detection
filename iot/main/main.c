@@ -1,5 +1,3 @@
-#include <stdint.h>
-
 #include "driver/i2c_types.h"
 #include "driver/i2c_master.h"
 #include "esp_err.h"
@@ -9,28 +7,18 @@
 
 #include "ssd1306.h"
 
-#include "button.h"
+#include "button_.h"
 #include "buzzer.h"
 #include "led.h"
 #include "max30102.h"
 #include "mpu6050.h"
-#include "mqtt_helper.h"
-#include "network_prov_helper.h"
+#include "mqtt_.h"
+#include "network_prov_.h"
 #include "nmea_parser.h"
 #include "time_sync.h"
 
 #include "config.h"
 #include "task.h"
-
-static esp_err_t add_device(i2c_master_bus_handle_t bus_handle, i2c_master_dev_handle_t* dev_handle, uint8_t dev_addr) {
-    i2c_device_config_t dev_cfg = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = dev_addr,
-        .scl_speed_hz = I2C_SPEED_HZ,
-    };
-
-    return i2c_master_bus_add_device(bus_handle, &dev_cfg, dev_handle);
-}
 
 static esp_err_t i2c_master_bus_init(i2c_master_bus_handle_t* bus_handle) {
     i2c_master_bus_config_t bus_cfg = {
@@ -65,12 +53,10 @@ void app_main() {
     // ESP_ERROR_CHECK(nvs_flash_erase());
     
     ret = nvs_flash_init();
-    
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
-    
     ESP_ERROR_CHECK(ret);
 
     ESP_ERROR_CHECK(network_prov_init());
@@ -81,13 +67,13 @@ void app_main() {
         .callback = confirm_timeout_cb,
         .name = "confirm_timer"
     };
-    esp_timer_handle_t confirm_timer = get_confirm_timer();
+    esp_timer_handle_t confirm_timer;
     ret = esp_timer_create(&timer_args, &confirm_timer);
-    
     if (ESP_OK != ret) {
         ESP_LOGE("TIMER", "Failed to init timer");
         goto cleanup;
     }
+    set_confirm_timer(confirm_timer);
 
     ret = button_init(&button, button_event_cb);
     if (ESP_OK != ret) {
@@ -121,49 +107,19 @@ void app_main() {
         goto cleanup;
     }
 
-    ret = add_device(bus_handle, &mpu_handle, MPU6050_I2C_ADDRESS);
-
-    if (ESP_OK != ret) {
-        ESP_LOGE(MPU6050_TAG, "Failed to add MPU6050: %s", esp_err_to_name(ret));
-        goto cleanup;
-    }
-
-    // ret = mpu6050_sensor_init(bus_handle, &mpu_handle, &mpu6050_sensor);
-    // if (ret != ESP_OK) {
-    //     ESP_LOGE(MPU6050_TAG, "Failed to init mpu6050 sensor: %s", esp_err_to_name(ret));
-    //     goto cleanup;
-    // }
-
-    mpu6050_sensor = mpu6050_create(mpu_handle);
-    
-    if (mpu6050_sensor == NULL) {
-        ESP_LOGE(MPU6050_TAG, "Failed to allocate MPU6050 handle");
-        goto cleanup;
-    }
-
-    ret = mpu6050_config(mpu6050_sensor, ACCE_FS_2G, GYRO_FS_250DPS);
-    
-    if (ESP_OK != ret) {
-        ESP_LOGE(MPU6050_TAG, "Failed to config MPU6050: %s", esp_err_to_name(ret));
-        goto cleanup;
-    }
-
-    ret = mpu6050_wakeup(mpu6050_sensor);
-
-    if (ESP_OK != ret) {
-        ESP_LOGE(MPU6050_TAG, "Failed to wake MPU6050: %s", esp_err_to_name(ret));
+    ret = mpu6050_sensor_init(bus_handle, &mpu_handle, &mpu6050_sensor);
+    if (ret != ESP_OK) {
+        ESP_LOGE(MPU6050_TAG, "Failed to init mpu6050 sensor: %s", esp_err_to_name(ret));
         goto cleanup;
     }
 
     nmea_sensor = nmea_parser_init(&nmea_cfg);
-
     if (nmea_sensor == NULL) {
         ESP_LOGE(NEO6MGPS_TAG, "Failed to init gps");
         goto cleanup;
     }
     
     ret = nmea_parser_add_handler(nmea_sensor, gps_event_handler, NULL);
-    
     if (ESP_OK != ret) {
         ESP_LOGE(NEO6MGPS_TAG, "Failed to add gps handler: %s", esp_err_to_name(ret));
         goto cleanup;
@@ -179,11 +135,17 @@ void app_main() {
     
 cleanup:
     button_deinit(button);
+    button = NULL;
     buzzer_deinit();
     led_deinit();
 
     max30102_sensor_deinit(max_handle, max30102_sensor);
-    // mpu6050_sensor_deinit(mpu_handle, mpu6050_sensor);
+    max_handle = NULL;
+    max30102_sensor = NULL;
+
+    mpu6050_sensor_deinit(mpu_handle, mpu6050_sensor);
+    mpu_handle = NULL;
+    mpu6050_sensor = NULL;
 
     if (ssd1306_screen) {
         ssd1306_remove(ssd1306_screen);
@@ -202,5 +164,6 @@ cleanup:
 
     if (confirm_timer) {
         esp_timer_delete(confirm_timer);
+        set_confirm_timer(NULL);
     }
 }

@@ -3,6 +3,6 @@ idf_component_register(
     REQUIRES
         esp_driver_uart
         esp_event
-        time_sync
+    PRIV_REQUIRES time_sync
     INCLUDE_DIRS "include"
 )
