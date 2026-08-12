@@ -2,7 +2,7 @@ import { Activity, Bell, Home, MapPin, Settings, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useRole } from "../../contexts/RoleContext";
-import type { PatientSection, Screen } from "../../types";
+import { screenPaths, type PatientSection, type Screen } from "../../types";
 
 type MobileItem = {
   key: string;
@@ -52,7 +52,7 @@ export function MobileNavigation({
       label,
       icon,
       active: patientSection === section,
-      onClick: () => navigate(`/patients/${section}?patientId=${encodeURIComponent(patientId!)}`),
+      onClick: () => navigate(`${screenPaths[`patient-${section}`]}?patientId=${encodeURIComponent(patientId!)}`),
     };
   }
 

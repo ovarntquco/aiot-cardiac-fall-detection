@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router";
+import { BrowserRouter, Route, Routes, useNavigate } from "react-router";
 import { screenPaths, type Screen } from "./types";
 import { AlertHistoryScreen } from "./screens/AlertHistoryScreen";
 import { HomeScreen } from "./screens/HomeScreen";
@@ -6,8 +6,13 @@ import { LoginScreen } from "./screens/LoginScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { PatientListScreen } from "./screens/PatientListScreen";
 import { GpsScreen } from "./screens/GpsScreen";
-import { RoleProvider, useRole } from "./contexts/RoleContext";
-import type { ReactNode } from "react";
+import { RoleProvider } from "./contexts/RoleContext";
+import {
+  PatientAlertsRoute,
+  PatientGpsRoute,
+  PatientOnly,
+  PatientOverviewRoute,
+} from "./lib/helper";
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -21,41 +26,13 @@ function AppRoutes() {
       <Route path={screenPaths.patients} element={<PatientListScreen onNav={navigateToScreen} />} />
       <Route path={screenPaths.gps} element={<PatientOnly><GpsScreen onNav={navigateToScreen} /></PatientOnly>} />
       <Route path={screenPaths.settings} element={<PatientOnly><SettingsScreen onNav={navigateToScreen} /></PatientOnly>} />
-      <Route path="/patients/overview" element={<PatientOverviewRoute onNav={navigateToScreen} />} />
-      <Route path="/patients/alerts" element={<PatientAlertsRoute onNav={navigateToScreen} />} />
-      <Route path="/patients/gps" element={<PatientGpsRoute onNav={navigateToScreen} />} />
+      <Route path={screenPaths["patient-overview"]} element={<PatientOverviewRoute onNav={navigateToScreen} />} />
+      <Route path={screenPaths["patient-alerts"]} element={<PatientAlertsRoute onNav={navigateToScreen} />} />
+      <Route path={screenPaths["patient-gps"]} element={<PatientGpsRoute onNav={navigateToScreen} />} />
       <Route path="/" element={<LoginScreen />} />
-      <Route path="*" element={<LoginScreen />} />
+      <Route path="*" element={<HomeScreen onNav={navigateToScreen}/>} />
     </Routes>
   );
-}
-
-function PatientOnly({ children }: { children: ReactNode }) {
-  const { role } = useRole();
-  return role === "caregiver" ? <Navigate to={screenPaths.patients} replace /> : children;
-}
-
-function RoleLanding() {
-  const { role } = useRole();
-  return <Navigate to={role === "caregiver" ? screenPaths.patients : screenPaths.home} replace />;
-}
-
-function PatientOverviewRoute({ onNav }: { onNav: (screen: Screen) => void }) {
-  const [searchParams] = useSearchParams();
-  const patientId = searchParams.get("patientId");
-  return patientId ? <HomeScreen onNav={onNav} patientId={patientId} /> : <Navigate to={screenPaths.patients} replace />;
-}
-
-function PatientAlertsRoute({ onNav }: { onNav: (screen: Screen) => void }) {
-  const [searchParams] = useSearchParams();
-  const patientId = searchParams.get("patientId");
-  return patientId ? <AlertHistoryScreen onNav={onNav} patientId={patientId} /> : <Navigate to={screenPaths.patients} replace />;
-}
-
-function PatientGpsRoute({ onNav }: { onNav: (screen: Screen) => void }) {
-  const [searchParams] = useSearchParams();
-  const patientId = searchParams.get("patientId");
-  return patientId ? <GpsScreen onNav={onNav} patientId={patientId} /> : <Navigate to={screenPaths.patients} replace />;
 }
 
 export default function App() {

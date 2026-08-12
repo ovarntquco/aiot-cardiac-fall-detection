@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Activity, Bell, Home, LogOut, MapPin, Settings, Shield, Users } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useRole } from "../../contexts/RoleContext";
-import type { PatientSection, Screen } from "../../types";
+import { screenPaths, type PatientSection, type Screen } from "../../types";
 
 type NavItem = {
   key: string;
@@ -59,7 +59,7 @@ export function Sidebar({
       label,
       icon,
       active: patientSection === section,
-      onClick: () => navigate(`/patients/${section}?patientId=${encodeURIComponent(patientId!)}`),
+      onClick: () => navigate(`${screenPaths[`patient-${section}`]}?patientId=${encodeURIComponent(patientId!)}`),
       nested: true,
     };
   }
