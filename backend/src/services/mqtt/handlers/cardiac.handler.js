@@ -8,7 +8,7 @@ export default async function handleCardiac(ctx) {
       deviceId: device.id,
       heartRate: data.heartRate,
       spo2: data.spo2,
-      recordedAt: data.recordedAt,
+      recordedAt: new Date(data.recordedAt),
     });
   } catch (err) {
     console.error("[cardiac] Failed to save reading:", err.message);

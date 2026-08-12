@@ -6,8 +6,8 @@ function formatAlertMessage({ event, gps }) {
   const timestamp = new Date(event.recorded_at);
   const formattedTime = isNaN(timestamp.getTime())
     ? "unknown time"
-    : timestamp.toLocaleString("en-US", {
-        timeZone: "UTC",
+    : timestamp.toLocaleString("vi-VN", {
+        timeZone: "Asia/Ho_Chi_Minh",
         year: "numeric",
         month: "2-digit",
         day: "2-digit",

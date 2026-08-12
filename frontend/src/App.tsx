@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router";
 import { screenPaths, type Screen } from "./types";
 import { AlertHistoryScreen } from "./screens/AlertHistoryScreen";
 import { HomeScreen } from "./screens/HomeScreen";
@@ -21,9 +21,9 @@ function AppRoutes() {
       <Route path={screenPaths.patients} element={<PatientListScreen onNav={navigateToScreen} />} />
       <Route path={screenPaths.gps} element={<PatientOnly><GpsScreen onNav={navigateToScreen} /></PatientOnly>} />
       <Route path={screenPaths.settings} element={<PatientOnly><SettingsScreen onNav={navigateToScreen} /></PatientOnly>} />
-      <Route path="/patients/:patientId/overview" element={<PatientOverviewRoute onNav={navigateToScreen} />} />
-      <Route path="/patients/:patientId/alerts" element={<PatientAlertsRoute onNav={navigateToScreen} />} />
-      <Route path="/patients/:patientId/gps" element={<PatientGpsRoute onNav={navigateToScreen} />} />
+      <Route path="/patients/overview" element={<PatientOverviewRoute onNav={navigateToScreen} />} />
+      <Route path="/patients/alerts" element={<PatientAlertsRoute onNav={navigateToScreen} />} />
+      <Route path="/patients/gps" element={<PatientGpsRoute onNav={navigateToScreen} />} />
       <Route path="/" element={<LoginScreen />} />
       <Route path="*" element={<LoginScreen />} />
     </Routes>
@@ -41,17 +41,20 @@ function RoleLanding() {
 }
 
 function PatientOverviewRoute({ onNav }: { onNav: (screen: Screen) => void }) {
-  const { patientId } = useParams();
+  const [searchParams] = useSearchParams();
+  const patientId = searchParams.get("patientId");
   return patientId ? <HomeScreen onNav={onNav} patientId={patientId} /> : <Navigate to={screenPaths.patients} replace />;
 }
 
 function PatientAlertsRoute({ onNav }: { onNav: (screen: Screen) => void }) {
-  const { patientId } = useParams();
+  const [searchParams] = useSearchParams();
+  const patientId = searchParams.get("patientId");
   return patientId ? <AlertHistoryScreen onNav={onNav} patientId={patientId} /> : <Navigate to={screenPaths.patients} replace />;
 }
 
 function PatientGpsRoute({ onNav }: { onNav: (screen: Screen) => void }) {
-  const { patientId } = useParams();
+  const [searchParams] = useSearchParams();
+  const patientId = searchParams.get("patientId");
   return patientId ? <GpsScreen onNav={onNav} patientId={patientId} /> : <Navigate to={screenPaths.patients} replace />;
 }
 

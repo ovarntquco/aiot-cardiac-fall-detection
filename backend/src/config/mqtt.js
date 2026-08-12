@@ -91,9 +91,10 @@ export function publish(topic, payload, options = { qos: 1, retain: false }) {
 
     client.publish(topic, message, options, (err) => {
       if (err) {
-        console.error(`Failed to publish to ${topic}:`, err.message);
+        console.error(`[MQTT] Failed to publish to ${topic}:`, err.message);
         reject(err);
       } else {
+        console.log(`[MQTT] Publish to ${topic}`);
         resolve();
       }
     });

@@ -25,12 +25,11 @@ export function MobileNavigation({
 }) {
   const { role } = useRole();
   const navigate = useNavigate();
-  const patientPath = patientId ? `/patients/${encodeURIComponent(patientId)}` : null;
 
   const items: MobileItem[] = role === "caregiver"
     ? [
         createScreenItem("patients", "Patients", <Users size={19} />, !patientSection),
-        ...(patientPath ? [
+        ...(patientId ? [
           createPatientItem("overview", "Health", <Activity size={19} />),
           createPatientItem("alerts", "Alerts", <Bell size={19} />),
           createPatientItem("gps", "GPS", <MapPin size={19} />),
@@ -53,7 +52,7 @@ export function MobileNavigation({
       label,
       icon,
       active: patientSection === section,
-      onClick: () => navigate(`${patientPath}/${section}`),
+      onClick: () => navigate(`/patients/${section}?patientId=${encodeURIComponent(patientId!)}`),
     };
   }
 

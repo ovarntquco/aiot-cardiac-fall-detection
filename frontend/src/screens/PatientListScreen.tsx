@@ -149,7 +149,7 @@ export function PatientListScreen({ onNav }: { onNav: (screen: Screen) => void }
                       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
                         <button
                           type="button"
-                          onClick={() => navigate(`/patients/${encodeURIComponent(patient.id)}/overview`)}
+                          onClick={() => navigate(`/patients/overview?patientId=${encodeURIComponent(patient.id)}`)}
                           className="flex min-h-16 min-w-0 flex-1 items-center gap-4 rounded-xl p-2.5 text-left transition-colors hover:bg-secondary/70"
                           aria-label={`View ${patient.full_name || "patient"}`}
                         >

@@ -8,7 +8,7 @@ export default async function handleGps(ctx) {
       deviceId: device.id,
       latitude: data.latitude,
       longitude: data.longitude,
-      recordedAt: data.recordedAt,
+      recordedAt: new Date(data.recordedAt),
     });
   } catch (err) {
     console.error("[gps] Failed to save reading:", err.message);

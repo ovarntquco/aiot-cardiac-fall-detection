@@ -12,7 +12,7 @@ export default async function handleEvent(ctx) {
     const event = await Event.create({
       deviceId: device.id,
       type: data.type,
-      recordedAt: data.recordedAt,
+      recordedAt: new Date(data.recordedAt),
     });
 
     const alert = await Alert.create(event.id);

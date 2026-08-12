@@ -7,6 +7,54 @@ const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY, {
   db: { schema: "cfd_system" },
 });
 
+function toTimestamp(value) {
+  const timestamp = Date.parse(value);
+
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function storeLatest(cache, reading) {
+  if (!reading?.device_id) {
+    return;
+  }
+
+  const current = cache.get(reading.device_id);
+  
+  if (!current || toTimestamp(reading.recorded_at) >= toTimestamp(current.recorded_at)) {
+    cache.set(reading.device_id, reading);
+  }
+}
+
+function initializeCache(cache, deviceId, reading) {
+  if (reading) {
+    storeLatest(cache, reading);
+  } else if (!cache.has(deviceId)) {
+    cache.set(deviceId, null);
+  }
+}
+
+async function getLatestReading(source, deviceId) {
+  if (source.cache.has(deviceId)) {
+    return source.cache.get(deviceId);
+  }
+
+  const reading = await source.loadLatest(deviceId);
+  initializeCache(source.cache, deviceId, reading);
+  return source.cache.get(deviceId);
+}
+
+export async function getLatestCardiacReading(deviceId) {
+  return getLatestReading(readingSources.cardiac, deviceId);
+}
+
+export async function getLatestGpsReading(deviceId) {
+  return getLatestReading(readingSources.gps, deviceId);
+}
+
+function createReadingSource(table, loadLatest) {
+  return { table, loadLatest, cache: new Map() };
+}
+
 const readingSources = {
   cardiac: createReadingSource("cardiac_readings", CardiacReading.findLatestByDeviceId),
   gps: createReadingSource("gps_readings", GpsReading.findLatestByDeviceId),
@@ -41,45 +89,6 @@ export async function stopRealtimeDatabase() {
   if (!readingsChannel) return;
   await supabase.removeChannel(readingsChannel);
   readingsChannel = null;
-}
-
-export async function getLatestCardiacReading(deviceId) {
-  return getLatestReading(readingSources.cardiac, deviceId);
-}
-
-export async function getLatestGpsReading(deviceId) {
-  return getLatestReading(readingSources.gps, deviceId);
-}
-
-function createReadingSource(table, loadLatest) {
-  return { table, loadLatest, cache: new Map() };
-}
-
-async function getLatestReading(source, deviceId) {
-  if (source.cache.has(deviceId)) return source.cache.get(deviceId);
-
-  const reading = await source.loadLatest(deviceId);
-  initializeCache(source.cache, deviceId, reading);
-  return source.cache.get(deviceId);
-}
-
-function initializeCache(cache, deviceId, reading) {
-  if (reading) storeLatest(cache, reading);
-  else if (!cache.has(deviceId)) cache.set(deviceId, null);
-}
-
-function storeLatest(cache, reading) {
-  if (!reading?.device_id) return;
-
-  const current = cache.get(reading.device_id);
-  if (!current || toTimestamp(reading.recorded_at) >= toTimestamp(current.recorded_at)) {
-    cache.set(reading.device_id, reading);
-  }
-}
-
-function toTimestamp(value) {
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
 export default supabase;

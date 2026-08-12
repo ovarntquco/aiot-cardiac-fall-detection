@@ -6,7 +6,7 @@ export default async function handleMotion(ctx) {
   try {
     await MotionReading.create({
       deviceId: device.id,
-      windowStart: data.windowStart,
+      windowStart: new Date(data.windowStart),
       sampleRateHz: data.sampleRateHz,
       tOffsets: data.tOffsets,
       acceX: data.acceX,
