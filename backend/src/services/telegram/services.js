@@ -19,7 +19,6 @@ function formatAlertMessage({ event, gps }) {
   const locationText = gps && gps.latitude && gps.longitude
     ? ` Location: https://maps.google.com/?q=${gps.latitude},${gps.longitude}`
     : "";
-
   return `⚠️ ALERT: event detected at ${formattedTime}.${locationText}`;
 }
 
@@ -29,7 +28,7 @@ export default async function sendTelegram({ chatId, event, gps, retryMax = 3 })
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id: chatId,
-      text: formatAlertMessage({ event, gps }),
+      text: formatAlertMessage({ event: event, gps: gps }),
     }),
   };
   

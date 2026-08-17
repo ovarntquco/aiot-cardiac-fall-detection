@@ -59,7 +59,7 @@ static esp_err_t stop_alert() {
 
 void max30102_task(void* pvParameters) {
     max30102_handle_t sensor = pvParameters;
-        
+    
     max30102_event_flags_t ev;
     max30102_monitor_t monitor;
     max30102_monitor_reset(&monitor);
@@ -238,7 +238,7 @@ void mpu6050_task(void* pvParameters) {
                     continue;
                 }
 
-                if (is_fall & !waiting_confirm) {
+                if (is_fall && !waiting_confirm) {
                     waiting_confirm = 1;
 
                     esp_timer_start_once(s_confirm_timer, ALERT_CONFIRM_TIMEOUT_MS);

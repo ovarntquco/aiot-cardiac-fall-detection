@@ -79,12 +79,10 @@ static bool json_get_int(cJSON* root, const char* key, int* out) {
     cJSON* item = cJSON_GetObjectItem(root, key);
 
     if (!cJSON_IsNumber(item)) {
-        cJSON_Delete(item);
         return false;
     }
 
     *out = item->valueint;
-    cJSON_Delete(item);
 
     return true;
 }
@@ -93,14 +91,12 @@ static bool json_get_char(cJSON* root, const char* key, char* out, size_t out_si
     cJSON* item = cJSON_GetObjectItem(root, key);
 
     if (!cJSON_IsString(item) || NULL == item->valuestring) {
-        cJSON_Delete(item);
         return false;
     }
 
     memcpy(out, item->valuestring, out_size - 1);
     out[out_size - 1] = '\0';
 
-    cJSON_Delete(item);
     return true;
 }
 

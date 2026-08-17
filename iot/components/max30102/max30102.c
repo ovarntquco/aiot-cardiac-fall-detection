@@ -9,8 +9,8 @@
 
 #include "max30102.h"
 
-#define CARDIAC_REQUIRED_STABLE_SAMPLES 300
-#define CARDIAC_REQUIRED_EVENT_SAMPLES  200
+#define CARDIAC_REQUIRED_STABLE_SAMPLES 4
+#define CARDIAC_REQUIRED_EVENT_SAMPLES  3
 
 #define MAX30102_WAKEUP     0x00
 #define MAX30102_RESET      0x40
@@ -744,6 +744,7 @@ void max30102_set_stats_for_task(int hr_low, int hr_high, int spo2_low) {
     s_stats.hr_low = hr_low;
     s_stats.hr_high = hr_high;
     s_stats.spo2_low = spo2_low;
+    ESP_LOGI(MAX30102_TAG, "%d, %d", s_stats.hr_high, hr_low);
 }
 
 void max30102_monitor_reset(max30102_monitor_t* const monitor) {
@@ -758,8 +759,10 @@ void max30102_process_cardiac_sample(int beat_avg, int spo2,
                                      max30102_event_flags_t* const event) {
     int64_t elapsed_ms = (esp_timer_get_time() - monitor->warmup_start_us) / 1000;
 
+    *event = CARDIAC_EVENT_NONE;
+    
     if (elapsed_ms < CARDIAC_SENSOR_WARMUP_MS) {
-        *event = CARDIAC_EVENT_NONE;
+        return;
     }
 
     uint8_t hr_valid = (beat_avg > 0);
@@ -767,23 +770,23 @@ void max30102_process_cardiac_sample(int beat_avg, int spo2,
 
     if (!hr_valid && !spo2_valid) {
         monitor->stable_count = 0;
-        *event = CARDIAC_EVENT_NONE;
+        return;
     }
     ++monitor->stable_count;
     if (monitor->stable_count < CARDIAC_REQUIRED_STABLE_SAMPLES) {
-        *event = CARDIAC_EVENT_NONE;
+        return;
     }
 
     max30102_event_flags_t flags = CARDIAC_EVENT_NONE;
     
     if (hr_valid && beat_avg < s_stats.hr_low) {
-        flags = CARDIAC_EVENT_HR_LOW;
+        flags |= CARDIAC_EVENT_HR_LOW;
     }
     if (hr_valid && beat_avg > s_stats.hr_high) {
-        flags = CARDIAC_EVENT_HR_HIGH;
+        flags |= CARDIAC_EVENT_HR_HIGH;
     }
     if (spo2_valid && spo2 < s_stats.spo2_low) {
-        flags = CARDIAC_EVENT_SPO2_LOW;
+        flags |= CARDIAC_EVENT_SPO2_LOW;
     }
 
     if (flags != CARDIAC_EVENT_NONE && flags == monitor->last_flags) {
@@ -797,6 +800,4 @@ void max30102_process_cardiac_sample(int beat_avg, int spo2,
         monitor->event_count = 0;
         *event = flags;
     }
-
-    *event = CARDIAC_EVENT_NONE;
 }

@@ -11,7 +11,6 @@ export default async function accessControl(req, res, next) {
     const role = req.user.role;
 
     if (role === "caregiver") {
-      console.log(req.query);
       const requestedPatientId = req.query.patientId;
       
       if (!requestedPatientId) {

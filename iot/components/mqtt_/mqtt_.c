@@ -9,6 +9,7 @@
 #include "max30102.h"
 
 #include "mqtt_.h"
+#include "led.h"
 
 static uint8_t s_mqtt_connected;
 static esp_mqtt_client_handle_t s_mqtt_client;
@@ -47,6 +48,7 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
                 
                 if (strncmp(p.device_id, DEVICE_ID, sizeof(DEVICE_ID)) == 0) {
                     max30102_set_stats_for_task(p.hr_low, p.hr_high, p.spo2_low);
+                    led_blink(200, 200, 2);
                     free(p.device_id);
                     p.device_id = NULL;
                 }

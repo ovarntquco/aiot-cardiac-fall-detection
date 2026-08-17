@@ -25,7 +25,7 @@ export default async function handleEvent(ctx) {
     await sendTelegram({
       chatId: dev.patient.chat_id,
       event: event,
-      gps: gps
+      gps: gps.gps_readings[0]
     });
   } catch (err) {
     console.warn(`[event] Failed to save event:`, err);

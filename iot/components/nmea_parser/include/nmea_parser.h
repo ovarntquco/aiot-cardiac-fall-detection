@@ -22,7 +22,7 @@ extern "C" {
 #define YEAR_BASE (2000)
 
 #define NEO6MGPS_TAG                "NEO6MGPS"
-#define GPS_SAMPLE_RATE_HZ          5
+#define GPS_SAMPLE_RATE_HZ          1
 #define GPS_PUBLISH_EVERY_N_SAMPLES (GPS_SAMPLE_RATE_HZ > 0 ? GPS_SAMPLE_RATE_HZ : 1)
 
 /**

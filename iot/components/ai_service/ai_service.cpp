@@ -58,7 +58,7 @@ extern "C" esp_err_t inference(const mpu6050_payload_t* payload, uint8_t* const 
     *is_fall = false;
     for (int i = 0; i < EI_CLASSIFIER_LABEL_COUNT; ++i) {
         if (0 == strcmp(result.classification[i].label, "fall") &&
-            result.classification[i].value >= 0.8) {
+            result.classification[i].value >= 0.98) {
             *is_fall = true;
         }
     }
